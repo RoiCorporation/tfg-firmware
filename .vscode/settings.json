@@ -46,6 +46,9 @@
         "time.h": "c",
         "driver.h": "c",
         "cyw43_arch.h": "c",
-        "wireless_station.h": "c"
+        "wireless_station.h": "c",
+        "assert.h": "c",
+        "stddef.h": "c",
+        "adc.h": "c"
     }
 }

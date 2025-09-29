@@ -28,6 +28,7 @@ pico_sdk_init()
 # Define the target (must be "tfg_firmware")
 add_executable(tfg_firmware
     wireless_station.c
+    sensors_functions.c
 )
 #set_target_properties(tfg_firmware PROPERTIES SUFFIX ".elf")
 set_target_properties(tfg_firmware PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} SUFFIX ".elf")

@@ -15,7 +15,7 @@ ls /dev/cu.*
 It's usually named _cu.usbmodem1101_ or similar.
 
 2. Run the minicom terminal emulator program to visualize the
-data being sent by the board through the USB connection.
+data being sent by the board through the USB connection
 ```
 minicom -b 100000 -D /dev/cu.usbmodem1101 
 ```

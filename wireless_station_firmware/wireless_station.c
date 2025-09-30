@@ -62,7 +62,7 @@ int main() {
             printf("I2C read failed!\n");
         }
 
-        printf("PPM of CO detected: %.2f\n", read_co_mq7());
+        printf("PPM of CO: %f\n", read_co_mq7());
         sleep_ms(200);
     }
 }

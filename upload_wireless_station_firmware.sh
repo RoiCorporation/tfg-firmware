@@ -31,6 +31,8 @@ cmake .. -G Ninja \
 echo ⛏️ Building executable file
 ninja
 
-# Upload the .elf file to the board.
+# Upload the .elf file to the board using picotool,
+# which interacts with the board when it's in BOOTSEL
+# mode.
 echo 🚀 Uploading program
 $HOME/.pico-sdk/picotool/2.2.0/picotool/picotool load tfg_firmware.elf -fx

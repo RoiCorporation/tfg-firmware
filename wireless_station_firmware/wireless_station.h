@@ -15,7 +15,6 @@ typedef struct {
 
 // Program constants.
 #define DHT22_PIN 0
-#define MQ_7_PIN 26
 #define SDA_PIN 4
 #define SCL_PIN 5
 #define MAX_TIMINGS 85
@@ -32,7 +31,6 @@ typedef struct {
 
 // Function declarations for the different sensors.
 void read_temperature_and_humidity(dht22_reading *result);
-float read_co_mq7();
 
 
 #endif

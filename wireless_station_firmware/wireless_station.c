@@ -2,23 +2,18 @@
 #include <stdlib.h>
 #include <math.h>
 #include "pico/stdlib.h"
-#include "hardware/adc.h"
 #include "hardware/i2c.h"
 #include "wireless_station.h"
 
 
 int main() {
     stdio_init_all();
-    adc_init();
     i2c_init(i2c0, I2C_BAUDRATE);
     gpio_init(DHT22_PIN);
-    adc_gpio_init(MQ_7_PIN);
     gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(SDA_PIN);
     gpio_pull_up(SCL_PIN);
-
-    adc_select_input(0);
 
     // Before your while loop, initialize the BH1750
     uint8_t cmd = BH1750_CONT_H_RES_MODE;
@@ -61,8 +56,6 @@ int main() {
         } else {
             printf("I2C read failed!\n");
         }
-
-        printf("PPM of CO: %f\n", read_co_mq7());
         sleep_ms(200);
     }
 }

@@ -45,7 +45,6 @@ target_link_libraries(tfg_firmware
     pico_stdlib
     hardware_i2c
     hardware_pio
-    hardware_adc
 )
 
 # Generate .elf, .bin, .hex, .uf2

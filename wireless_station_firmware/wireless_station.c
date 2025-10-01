@@ -4,6 +4,7 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "wireless_station.h"
+#include "errors.h"
 
 
 int main() {
@@ -24,38 +25,32 @@ int main() {
     uint8_t buf[2];
     int bytes_read = i2c_read_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, buf, 2, false);
 
+    // Variables passed to the reading functions. They will store the values
+    // read by the different sensors.
+    dht22_reading dht22_reading;
+    float light_intensity_reading;
 
     while (1) {
-        dht22_reading dht22_reading;
         dht22_reading.humidity = NAN;
         dht22_reading.temp_celsius = NAN;
 
-        read_temperature_and_humidity(&dht22_reading);
-
-        if (!isnan(dht22_reading.humidity) && !isnan(dht22_reading.temp_celsius)) {
-            float fahrenheit = (dht22_reading.temp_celsius * 9 / 5) + 32;
-            printf("Humidity = %.1f%%, Temperature = %.1fC (%.1fF)\n",
-                   dht22_reading.humidity, dht22_reading.temp_celsius, fahrenheit);
+        if (read_temperature_and_humidity(&dht22_reading) == -1) {
+            printf("Error when reading the temperature and humidity sensor. Error number %d\n",
+                TEMP_HUMIDITY_READ_ERROR);
         }
-        sleep_ms(2000); // wait before next sample
-
-        uint8_t cmd = BH1750_CONT_H_RES_MODE;
-        i2c_write_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, &cmd, 1, false);
-
-        // Wait for conversion (max 180 ms)
-        sleep_ms(180);
-
-        // Read 2 bytes
-        uint8_t buf[2];
-        int bytes_read = i2c_read_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, buf, 2, false);
-
-        if (bytes_read == 2) {
-            uint16_t raw = (buf[0] << 8) | buf[1];
-            float lux = raw / 1.2f;
-            printf("Light intensity: %.2f lux\n", lux);
-        } else {
-            printf("I2C read failed!\n");
+        else {
+            printf("Humidity: %.1f%%, Temperature: %.1fC\n",
+                   dht22_reading.humidity, dht22_reading.temp_celsius);
         }
-        sleep_ms(200);
+
+        if (read_light_intensity(&light_intensity_reading) == -1) {
+            printf("Error when reading the light intensity sensor. Error number %d\n",
+                LIGHT_SENSOR_READ_ERROR);
+        }
+        else {
+            printf("Light intensity: %.4f\n", light_intensity_reading);
+        }
+
+        sleep_ms(1000);
     }
 }

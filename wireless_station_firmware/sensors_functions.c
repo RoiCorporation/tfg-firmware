@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <math.h>
 #include "pico/stdlib.h"
+#include "hardware/i2c.h"
 #include "wireless_station.h"
 
 
-void read_temperature_and_humidity(dht22_reading *result) {
+int read_temperature_and_humidity(dht22_reading *reading) {
     int data[5] = {0, 0, 0, 0, 0};
     uint j = 0;
     uint last = 1;
@@ -38,13 +39,34 @@ void read_temperature_and_humidity(dht22_reading *result) {
     if ((j >= 40) &&
         (data[4] == ((data[0] + data[1] + data[2] + data[3]) & 0xFF))) {
 
-        result->humidity = (float) ((data[0] << 8) + data[1]) / 10;
-        if (result->humidity > 100) result->humidity = data[0]; // DHT11 fallback
+        reading->humidity = (float) ((data[0] << 8) + data[1]) / 10;
+        if (reading->humidity > 100) reading->humidity = data[0]; // DHT11 fallback
 
-        result->temp_celsius = (float) (((data[2] & 0x7F) << 8) + data[3]) / 10;
-        if (result->temp_celsius > 125) result->temp_celsius = data[2];
+        reading->temp_celsius = (float) (((data[2] & 0x7F) << 8) + data[3]) / 10;
+        if (reading->temp_celsius > 125) reading->temp_celsius = data[2];
 
-        if (data[2] & 0x80) result->temp_celsius = -result->temp_celsius; // negative temp
+        if (data[2] & 0x80) reading->temp_celsius = -reading->temp_celsius; // negative temp
+
+        return 0;
     }
 
+    reading->humidity = NAN;
+    reading->temp_celsius = NAN;
+    return -1;
+}
+
+
+int read_light_intensity(float *reading) {
+    // Read 2 bytes
+    uint8_t buf[2];
+    int bytes_read = i2c_read_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, buf, 2, false);
+
+    if (bytes_read == 2) {
+        uint16_t raw = (buf[0] << 8) | buf[1];
+        float lux = raw / 1.2f;
+        *reading = lux;
+        return 0;
+    } 
+    
+    return -1;
 }

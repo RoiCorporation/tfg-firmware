@@ -30,6 +30,7 @@ typedef struct {
 
 
 // Function declarations for the different sensors.
+void initialize_board();
 int read_temperature_and_humidity(dht22_reading *reading);
 int read_light_intensity(float *reading);
 

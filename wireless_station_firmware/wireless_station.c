@@ -8,22 +8,13 @@
 
 
 int main() {
-    stdio_init_all();
-    i2c_init(i2c0, I2C_BAUDRATE);
-    gpio_init(DHT22_PIN);
-    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(SDA_PIN);
-    gpio_pull_up(SCL_PIN);
+    
+    initialize_board();
 
-    // Before your while loop, initialize the BH1750
+    // Initialize the BH1750.
     uint8_t cmd = BH1750_CONT_H_RES_MODE;
     i2c_write_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, &cmd, 1, false);
-    sleep_ms(180); // wait for first measurement (~120-180ms for high res)
-
-    // Now inside your loop, read 2 bytes
-    uint8_t buf[2];
-    int bytes_read = i2c_read_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, buf, 2, false);
+    sleep_ms(180); // Wait for the first measurement (~120-180ms for high res).
 
     // Variables passed to the reading functions. They will store the values
     // read by the different sensors.

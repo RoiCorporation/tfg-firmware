@@ -3,10 +3,10 @@
 set -e  # Stop if any command fails.
 
 # Delete the build folder and create a new one.
-echo 🗑️ Removing old build folder
+echo 🗑️ Removing the old build folder
 rm -rf build
 
-echo ♻️ Recreating build folder
+echo ♻️ Recreating the build folder
 mkdir build
 cd build
 
@@ -28,11 +28,11 @@ cmake .. -G Ninja \
 # compiler on every .c file, link the .o files into
 # the final .elf and runs picotool to generate files
 # in derivative formats of the .elf.
-echo ⛏️ Building executable file
+echo ⛏️ Building the executable file
 ninja
 
 # Upload the .elf file to the board using picotool,
 # which interacts with the board when it's in BOOTSEL
 # mode.
-echo 🚀 Uploading program
+echo 🚀 Uploading the program to the board
 $HOME/.pico-sdk/picotool/2.2.0/picotool/picotool load tfg_firmware.elf -fx

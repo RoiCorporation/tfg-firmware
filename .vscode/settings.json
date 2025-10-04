@@ -2,41 +2,45 @@
     "cmake.showSystemKits": false,
     "cmake.options.statusBarVisibility": "hidden",
     "cmake.options.advanced": {
-        "build": {
-            "statusBarVisibility": "hidden"
-        },
-        "launch": {
-            "statusBarVisibility": "hidden"
-        },
-        "debug": {
-            "statusBarVisibility": "hidden"
-        }
+        "build": { "statusBarVisibility": "hidden" },
+        "launch": { "statusBarVisibility": "hidden" },
+        "debug": { "statusBarVisibility": "hidden" }
     },
     "cmake.configureOnEdit": false,
     "cmake.automaticReconfigure": false,
     "cmake.configureOnOpen": false,
     "cmake.generator": "Ninja",
-    "cmake.cmakePath": "${userHome}/.pico-sdk/cmake/v3.31.5/bin/cmake",
+
+    // Use system-installed cmake (Homebrew)
+    "cmake.cmakePath": "/opt/homebrew/bin/cmake",
+
     "C_Cpp.debugShortcut": false,
-    "terminal.integrated.env.windows": {
-        "PICO_SDK_PATH": "${env:USERPROFILE}/.pico-sdk/sdk/2.2.0",
-        "PICO_TOOLCHAIN_PATH": "${env:USERPROFILE}/.pico-sdk/toolchain/RISCV_ZCB_RPI_2_1_1_3",
-        "Path": "${env:USERPROFILE}/.pico-sdk/toolchain/RISCV_ZCB_RPI_2_1_1_3/bin;${env:USERPROFILE}/.pico-sdk/picotool/2.2.0/picotool;${env:USERPROFILE}/.pico-sdk/cmake/v3.31.5/bin;${env:USERPROFILE}/.pico-sdk/ninja/v1.12.1;${env:PATH}"
-    },
+
+    // Environment variables (macOS)
     "terminal.integrated.env.osx": {
-        "PICO_SDK_PATH": "${env:HOME}/.pico-sdk/sdk/2.2.0",
-        "PICO_TOOLCHAIN_PATH": "${env:HOME}/.pico-sdk/toolchain/RISCV_ZCB_RPI_2_1_1_3",
-        "PATH": "${env:HOME}/.pico-sdk/toolchain/RISCV_ZCB_RPI_2_1_1_3/bin:${env:HOME}/.pico-sdk/picotool/2.2.0/picotool:${env:HOME}/.pico-sdk/cmake/v3.31.5/bin:${env:HOME}/.pico-sdk/ninja/v1.12.1:${env:PATH}"
+        "PICO_SDK_PATH": "${workspaceFolder}/pico-sdk",
+        "PATH": "/opt/homebrew/bin:/opt/homebrew/opt/riscv-gnu-toolchain/bin:${env:PATH}"
     },
+
+    // Environment variables (Linux)
     "terminal.integrated.env.linux": {
-        "PICO_SDK_PATH": "${env:HOME}/.pico-sdk/sdk/2.2.0",
-        "PICO_TOOLCHAIN_PATH": "${env:HOME}/.pico-sdk/toolchain/RISCV_ZCB_RPI_2_1_1_3",
-        "PATH": "${env:HOME}/.pico-sdk/toolchain/RISCV_ZCB_RPI_2_1_1_3/bin:${env:HOME}/.pico-sdk/picotool/2.2.0/picotool:${env:HOME}/.pico-sdk/cmake/v3.31.5/bin:${env:HOME}/.pico-sdk/ninja/v1.12.1:${env:PATH}"
+        "PICO_SDK_PATH": "${workspaceFolder}/pico-sdk",
+        "PATH": "/usr/local/bin:${env:PATH}"
     },
+
+    // Environment variables (Windows)
+    "terminal.integrated.env.windows": {
+        "PICO_SDK_PATH": "${workspaceFolder}\\pico-sdk",
+        "Path": "${env:Path}"
+    },
+
     "raspberry-pi-pico.cmakeAutoConfigure": true,
-    "raspberry-pi-pico.useCmakeTools": false,
-    "raspberry-pi-pico.cmakePath": "${HOME}/.pico-sdk/cmake/v3.31.5/bin/cmake",
-    "raspberry-pi-pico.ninjaPath": "${HOME}/.pico-sdk/ninja/v1.12.1/ninja",
+    "raspberry-pi-pico.useCmakeTools": true,
+
+    // Let the extension use system cmake/ninja instead of ~/.pico-sdk
+    "raspberry-pi-pico.cmakePath": "/opt/homebrew/bin/cmake",
+    "raspberry-pi-pico.ninjaPath": "/opt/homebrew/bin/ninja",
+
     "files.associations": {
         "stdio.h": "c",
         "gpio.h": "c",

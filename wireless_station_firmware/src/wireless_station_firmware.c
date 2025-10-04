@@ -3,7 +3,7 @@
 #include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
-#include "wireless_station.h"
+#include "wireless_station_firmware.h"
 #include "errors.h"
 
 

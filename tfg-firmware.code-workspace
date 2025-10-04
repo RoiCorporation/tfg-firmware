@@ -1,0 +1,57 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "wireless_station_firmware"
+		},
+		{
+			"path": "central_station_firmware"
+		}
+	],
+	"settings": {
+		"cmake.options.statusBarVisibility": "hidden",
+		"cmake.options.advanced": {
+			"build": {
+				"statusBarVisibility": "hidden"
+			},
+			"launch": {
+				"statusBarVisibility": "hidden"
+			},
+			"debug": {
+				"statusBarVisibility": "hidden"
+			}
+		},
+		"terminal.integrated.env.osx": {
+			"PICO_SDK_PATH": "${workspaceFolder}/pico-sdk",
+			"PATH": "/opt/homebrew/bin:/opt/homebrew/opt/riscv-gnu-toolchain/bin:${env:PATH}"
+		},
+		"terminal.integrated.env.linux": {
+			"PICO_SDK_PATH": "${workspaceFolder}/pico-sdk",
+			"PATH": "/usr/local/bin:${env:PATH}"
+		},
+		"terminal.integrated.env.windows": {
+			"PICO_SDK_PATH": "${workspaceFolder}\\pico-sdk",
+			"Path": "${env:Path}"
+		},
+		"raspberry-pi-pico.cmakeAutoConfigure": true,
+		"raspberry-pi-pico.useCmakeTools": true,
+		"raspberry-pi-pico.cmakePath": "/opt/homebrew/bin/cmake",
+		"raspberry-pi-pico.ninjaPath": "/opt/homebrew/bin/ninja",
+		"files.associations": {
+			"stdio.h": "c",
+			"gpio.h": "c",
+			"stdlib.h": "c",
+			"i2c.h": "c",
+			"math.h": "c",
+			"time.h": "c",
+			"driver.h": "c",
+			"cyw43_arch.h": "c",
+			"wireless_station.h": "c",
+			"assert.h": "c",
+			"stddef.h": "c",
+			"adc.h": "c"
+		}
+	}
+}

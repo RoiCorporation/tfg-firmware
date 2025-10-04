@@ -6,7 +6,7 @@ This is the repository for the firmware of the different boards in my TFG projec
 Here's a collection of the required libraries that are necessary to install in 
 order to code and upload the firmware.
 
-### Pico SDK
+### Pico SDK
 Provides libraries, headers, and CMake helpers to write and build firmware for
 Raspberry Pi Pico boards.
 

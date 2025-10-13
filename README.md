@@ -31,3 +31,6 @@ upload firmware, reboot devices, inspect flash, and manage BOOTSEL mode.
 ### minicom
 Serial terminal program to view logs and interact with the Pico over USB 
 (UART/stdio).
+
+### Doxygen
+Handles documentation generation on the go.

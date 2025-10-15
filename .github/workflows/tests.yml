@@ -17,8 +17,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ruby
           gem install --user-install ceedling
-          echo 'export PATH="$HOME/.local/share/gem/ruby/3.2.0/bin:$PATH"' >> $GITHUB_ENV
-          
+          echo "$(ruby -r rubygems -e 'puts Gem.user_dir')/bin" >> $GITHUB_PATH
+
       - name: Run Ceedling Tests
         working-directory: wireless_station_firmware/tests
         run: ceedling test:all

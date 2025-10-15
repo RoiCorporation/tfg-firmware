@@ -1,11 +1,11 @@
-name: Run Ceedling Tests
+name: Run Tests
 
 on:
   push:
   pull_request:
 
 jobs:
-  test:
+  tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,8 +16,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ruby
-          gem install ceedling
-
-      - name: Run tests
+          gem install --user-install ceedling
+          echo 'export PATH="$HOME/.local/share/gem/ruby/3.2.0/bin:$PATH"' >> $GITHUB_ENV
+          
+      - name: Run Ceedling Tests
         working-directory: wireless_station_firmware/tests
         run: ceedling test:all

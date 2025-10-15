@@ -3,8 +3,8 @@ This is the repository for the firmware of the different boards in my TFG projec
 
 
 ## 📚 Required libraries
-Here's a collection of the required libraries that are necessary to install in 
-order to code and upload the firmware.
+Here's a collection of the required libraries, SKDs and other tools that are 
+necessary to code and upload the firmware.
 
 ### Pico SDK
 Provides libraries, headers, and CMake helpers to write and build firmware for
@@ -32,5 +32,9 @@ upload firmware, reboot devices, inspect flash, and manage BOOTSEL mode.
 Serial terminal program to view logs and interact with the Pico over USB 
 (UART/stdio).
 
-### Doxygen
-Handles documentation generation on the go.
+### Doxygen
+Improves how javadoc comments are generated in each function.
+
+### Ceedling
+Testing tool that combines Unity and CMock to make it easier to unit test 
+data-handling functions in the firmware.

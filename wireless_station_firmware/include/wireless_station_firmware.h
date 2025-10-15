@@ -3,7 +3,7 @@
 
 
 // Aliases.
-typedef uint pin_t;
+typedef unsigned int pin_t;
 
 
 // Structs.
@@ -27,10 +27,10 @@ typedef struct {
 #define BOARD_ADC_RESOLUTION 4096
 #define MINUTE_IN_MILLISECONDS 60000
 #define LENGTH_PREVIOUS_READINGS_ARRAY 5
-#define TEMPERATURE_INCREASE_BUFFER 0.2
-#define HUMIDITY_INCREASE_BUFFER 2.0
-#define PRESSURE_INCREASE_BUFFER 2.0
-#define AIR_QUALITY_WORSENING_BUFFER 2.0
+#define TEMPERATURE_INCREASE_MARGIN 0.2
+#define HUMIDITY_INCREASE_MARGIN 2.0
+#define PRESSURE_INCREASE_MARGIN 2.0
+#define AIR_QUALITY_WORSENING_MARGIN 2.0
 
 
 // Function declarations for the different sensors.

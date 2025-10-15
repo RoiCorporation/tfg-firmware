@@ -1,0 +1,23 @@
+name: Run Ceedling Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Ruby & Ceedling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby
+          gem install ceedling
+
+      - name: Run tests
+        working-directory: wireless_station_firmware/tests
+        run: ceedling test:all

@@ -33,6 +33,7 @@ typedef struct {
 #define HUMIDITY_INCREASE_MARGIN 2.0
 #define PRESSURE_INCREASE_MARGIN 2.0
 #define AIR_QUALITY_WORSENING_MARGIN 2.0
+#define EPSILON 1e-5
 
 
 // Function declarations for the different sensors and other devices used.

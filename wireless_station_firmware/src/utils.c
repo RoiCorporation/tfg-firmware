@@ -21,19 +21,19 @@ unsigned int analyze_hazards(ambient_info_t previous_readings[LENGTH_PREVIOUS_RE
     for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
         if (!is_temp_rising || 
             (previous_readings[i].temperature <= previous_readings[i - 1].temperature) || 
-            ((previous_readings[i].temperature - previous_readings[i - 1].temperature) < TEMPERATURE_INCREASE_MARGIN))
+            ((previous_readings[i].temperature - previous_readings[i - 1].temperature) < (TEMPERATURE_INCREASE_MARGIN - EPSILON)))
             is_temp_rising = false;
         if (!is_humidity_rising || 
             (previous_readings[i].humidity <= previous_readings[i - 1].humidity) ||
-            ((previous_readings[i].humidity - previous_readings[i - 1].humidity) < HUMIDITY_INCREASE_MARGIN))
+            ((previous_readings[i].humidity - previous_readings[i - 1].humidity) < (HUMIDITY_INCREASE_MARGIN - EPSILON)))
             is_humidity_rising = false;
         if (!is_pressure_rising || 
             (previous_readings[i].pressure <= previous_readings[i - 1].pressure) ||
-            ((previous_readings[i].pressure - previous_readings[i - 1].pressure) < PRESSURE_INCREASE_MARGIN))
+            ((previous_readings[i].pressure - previous_readings[i - 1].pressure) < (PRESSURE_INCREASE_MARGIN - EPSILON)))
             is_pressure_rising = false;
         if (!is_air_quality_worsening || 
             (previous_readings[i].air_quality_index >= previous_readings[i - 1].air_quality_index) ||
-            ((previous_readings[i].air_quality_index - previous_readings[i - 1].air_quality_index) > AIR_QUALITY_WORSENING_MARGIN))
+            ((previous_readings[i].air_quality_index - previous_readings[i - 1].air_quality_index) > (AIR_QUALITY_WORSENING_MARGIN - EPSILON)))
             is_air_quality_worsening = false;
     }
 

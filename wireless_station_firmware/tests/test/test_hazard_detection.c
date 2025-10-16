@@ -84,5 +84,4 @@ void test_analyze_hazards_breaking_incrementing_parameter_series(void) {
 
     clean_previous_readings_list(previous_readings);  // Reset the previous readings list.
   }
-
 }

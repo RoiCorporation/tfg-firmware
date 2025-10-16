@@ -100,8 +100,10 @@
     - +:test/**
   :source:
     - ../src/**
+    - src/**
   :include:
     - ../include/**
+    - include/**
   :libraries: []
 
 # You can even specify specific files to add or remove from your test

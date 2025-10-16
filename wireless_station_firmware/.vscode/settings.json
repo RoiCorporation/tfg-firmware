@@ -41,6 +41,7 @@
         "i2c.h": "c",
         "wireless_station_firmware.h": "c",
         "random": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "test_functions.h": "c"
     },
 }

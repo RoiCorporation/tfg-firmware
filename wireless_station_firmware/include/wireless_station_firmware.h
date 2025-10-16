@@ -17,6 +17,7 @@ typedef struct {
 
 
 // Program constants.
+#define AMBIENT_INFO_FIELD_COUNT 5
 #define DHT22_PIN 0
 #define SDA_PIN 4
 #define SCL_PIN 5

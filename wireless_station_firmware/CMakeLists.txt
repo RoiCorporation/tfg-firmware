@@ -37,7 +37,7 @@ pico_sdk_init()
 
 add_executable(wireless_station_firmware 
     src/wireless_station_firmware.c 
-    src/sensors.c 
+    src/functions.c 
     src/utils.c
 )
 

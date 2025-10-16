@@ -4,7 +4,7 @@
 #include "test_functions.h"
 
 
-TEST_SOURCE_FILE("sensor_utils.c")
+TEST_SOURCE_FILE("utils.c")
 
 void setUp(void) {}
 void tearDown(void) {}

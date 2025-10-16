@@ -19,6 +19,7 @@ typedef struct {
 // Program constants.
 #define AMBIENT_INFO_FIELD_COUNT 5
 #define DHT22_PIN 0
+#define BUZZER_PIN 15
 #define SDA_PIN 4
 #define SCL_PIN 5
 #define MAX_TIMINGS 85
@@ -34,11 +35,13 @@ typedef struct {
 #define AIR_QUALITY_WORSENING_MARGIN 2.0
 
 
-// Function declarations for the different sensors.
+// Function declarations for the different sensors and other devices used.
 void initialize_board();
+void initialize_i2c_bus();
 int read_temperature_and_humidity(ambient_info_t *reading);
 int read_light_intensity(ambient_info_t *reading);
-int analyze_hazards(ambient_info_t previous_readings[]);
+unsigned int analyze_hazards(ambient_info_t previous_readings[]);
+void play_hazard_alert(unsigned int hazard_code);
 
 
 #endif

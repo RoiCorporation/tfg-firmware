@@ -38,7 +38,7 @@ pico_sdk_init()
 add_executable(wireless_station_firmware 
     src/wireless_station_firmware.c 
     src/sensors.c 
-    src/sensor_utils.c
+    src/utils.c
 )
 
 pico_set_program_name(wireless_station_firmware "wireless_station_firmware")
@@ -56,6 +56,7 @@ target_link_libraries(wireless_station_firmware
     pico_stdlib
     hardware_i2c
     hardware_pio
+    hardware_pwm
 )
 
 # Add the standard include files to the build

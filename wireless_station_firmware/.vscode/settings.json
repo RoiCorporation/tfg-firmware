@@ -42,6 +42,9 @@
         "wireless_station_firmware.h": "c",
         "random": "c",
         "stdio.h": "c",
-        "test_functions.h": "c"
+        "test_functions.h": "c",
+        "cstdint": "c",
+        "pwm.h": "c",
+        "stdbool.h": "c"
     },
 }

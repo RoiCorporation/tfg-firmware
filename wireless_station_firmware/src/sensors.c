@@ -2,17 +2,29 @@
 #include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
+#include "hardware/pwm.h"
 #include "wireless_station_firmware.h"
 #include "errors.h"
 
 
 /**
- * @brief initializes the different board components, such as stdio, I2C and GPIO.
+ * @brief Initialize the different board components, such as stdio, I2C and GPIO.
  */
 void initialize_board() {
     stdio_init_all();
-    i2c_init(i2c0, I2C_BAUDRATE);
+    initialize_i2c_bus();
     gpio_init(DHT22_PIN);
+    gpio_set_function(BUZZER_PIN, GPIO_FUNC_PWM);
+    uint slice_num = pwm_gpio_to_slice_num(BUZZER_PIN);
+    pwm_set_enabled(slice_num, false);
+}
+
+
+/**
+ * @brief Initialize the I2C bus and the pins for the SDA and SCL lines.
+ */
+void initialize_i2c_bus() {
+    i2c_init(i2c0, I2C_BAUDRATE);
     gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(SDA_PIN);
@@ -21,7 +33,7 @@ void initialize_board() {
 
 
 /**
- * @brief reads temperature and humidity from the DHT22 sensor.
+ * @brief Read temperature and humidity from the DHT22 sensor.
  * 
  * @param reading pointer to an ambient_info_t struct where the read values will be stored.
  * @return int 0 if the reading was successful, else -1.
@@ -78,7 +90,7 @@ int read_temperature_and_humidity(ambient_info_t *reading) {
 
 
 /**
- * @brief reads light intensity from the light sensor.
+ * @brief Read light intensity from the light sensor.
  * 
  * @param reading pointer to an ambient_info_t struct where the read values will be stored.
  * @return int 0 if the reading was successful, else -1.

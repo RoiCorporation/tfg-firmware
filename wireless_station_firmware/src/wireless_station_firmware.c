@@ -58,22 +58,25 @@ int main() {
         switch(hazard_code) {
             case TEMPERATURE_RISING_HAZARD:
                 printf("ALERT: TEMPERATURE RISING!\n");
+                play_hazard_alert(TEMPERATURE_RISING_HAZARD);
                 break;
             case HUMIDITY_RISING_HAZARD:
                 printf("ALERT: HUMIDITY RISING!\n");
+                play_hazard_alert(HUMIDITY_RISING_HAZARD);
                 break;
             case PRESSURE_RISING_HAZARD:
                 printf("ALERT: PRESSURE RISING!\n");
+                play_hazard_alert(PRESSURE_RISING_HAZARD);
                 break;
             case AIR_QUALITY_WORSENING_HAZARD:
+                play_hazard_alert(AIR_QUALITY_WORSENING_HAZARD);
                 printf("ALERT: AIR QUALITY WORSENING!\n");
                 break;
             default:
                 break;
         }
-
     
         // Wait another full minute before reading sensors again.
-        sleep_ms(1000);
+        sleep_ms(1000); //sleep_ms(MINUTE_IN_MILLISECONDS)
     }
 }

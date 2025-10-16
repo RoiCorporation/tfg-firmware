@@ -121,7 +121,7 @@ int read_light_intensity(ambient_info_t *reading) {
 void play_hazard_alert(unsigned int hazard_code) {
     uint slice = pwm_gpio_to_slice_num(BUZZER_PIN);
     uint channel = pwm_gpio_to_channel(BUZZER_PIN);
-    uint frequency, bip_period;
+    uint frequency, bip_period = 100;
     
     switch(hazard_code) {
         case TEMPERATURE_RISING_HAZARD:

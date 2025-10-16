@@ -55,25 +55,9 @@ int main() {
         previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY - 1] = sensor_readings;
 
         int hazard_code = analyze_hazards(previous_readings);
-        switch(hazard_code) {
-            case TEMPERATURE_RISING_HAZARD:
-                printf("ALERT: TEMPERATURE RISING!\n");
-                play_hazard_alert(TEMPERATURE_RISING_HAZARD);
-                break;
-            case HUMIDITY_RISING_HAZARD:
-                printf("ALERT: HUMIDITY RISING!\n");
-                play_hazard_alert(HUMIDITY_RISING_HAZARD);
-                break;
-            case PRESSURE_RISING_HAZARD:
-                printf("ALERT: PRESSURE RISING!\n");
-                play_hazard_alert(PRESSURE_RISING_HAZARD);
-                break;
-            case AIR_QUALITY_WORSENING_HAZARD:
-                play_hazard_alert(AIR_QUALITY_WORSENING_HAZARD);
-                printf("ALERT: AIR QUALITY WORSENING!\n");
-                break;
-            default:
-                break;
+        if (hazard_code != 0) {
+            printf("Potential hazard detected! Code: %d\n", hazard_code);
+            play_hazard_alert(hazard_code);
         }
     
         // Wait another full minute before reading sensors again.

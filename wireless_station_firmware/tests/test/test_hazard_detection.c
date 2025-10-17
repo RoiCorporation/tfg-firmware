@@ -1,10 +1,10 @@
 #include "unity.h"
 #include "wireless_station_firmware.h"
-#include "errors.h"
+#include "hazards.h"
 #include "test_functions.h"
 
 
-TEST_SOURCE_FILE("utils.c")
+TEST_SOURCE_FILE("hazards.c")
 
 void setUp(void) {}
 void tearDown(void) {}

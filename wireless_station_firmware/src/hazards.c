@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include "wireless_station_firmware.h"
-#include "errors.h"
+#include "hazards.h"
 
 
 /**

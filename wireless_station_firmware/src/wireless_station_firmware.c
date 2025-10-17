@@ -4,6 +4,8 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "wireless_station_firmware.h"
+#include "hazards.h"
+#include "alerts.h"
 #include "errors.h"
 
 
@@ -57,7 +59,7 @@ int main() {
         int hazard_code = analyze_hazards(previous_readings);
         if (hazard_code != 0) {
             printf("Potential hazard detected! Code: %d\n", hazard_code);
-            play_hazard_alert(hazard_code);
+            activate_hazard_alert(hazard_code);
         }
     
         // Wait another full minute before reading sensors again.

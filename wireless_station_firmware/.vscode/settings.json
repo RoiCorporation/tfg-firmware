@@ -45,6 +45,9 @@
         "test_functions.h": "c",
         "cstdint": "c",
         "pwm.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "assert.h": "c",
+        "errors.h": "c",
+        "stdlib.h": "c"
     },
 }

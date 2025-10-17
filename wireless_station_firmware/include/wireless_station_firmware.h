@@ -2,11 +2,11 @@
 #define WIRELESS_STATION_FIRMWARE_H
 
 
-// Aliases.
+// === Aliases ===
 typedef unsigned int pin_t;
 
 
-// Structs.
+// === Structs ===
 typedef struct {
     float temperature;
     float humidity;
@@ -15,6 +15,8 @@ typedef struct {
     float light_intensity;
 } ambient_info_t;
 
+
+// === Constants ===
 
 // Program constants.
 #define AMBIENT_INFO_FIELD_COUNT 5
@@ -36,13 +38,15 @@ typedef struct {
 #define EPSILON 1e-5
 
 
-// Function declarations for the different sensors and other devices used.
+// === Function declarations ===
+
+// Declarations for setup functions.
 void initialize_board();
 void initialize_i2c_bus();
+
+// Declarations for functions related to sensor readings.
 int read_temperature_and_humidity(ambient_info_t *reading);
 int read_light_intensity(ambient_info_t *reading);
-unsigned int analyze_hazards(ambient_info_t previous_readings[]);
-void play_hazard_alert(unsigned int hazard_code);
 
 
 #endif

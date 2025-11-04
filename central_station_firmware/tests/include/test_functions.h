@@ -1,0 +1,17 @@
+#ifndef TEST_FUNCTIONS_H
+#define TEST_FUNCTIONS_H
+
+
+#include "wireless_station_firmware.h"
+
+
+// Function declarations.
+void clean_previous_readings_list(ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY]);
+void create_rising_temperature_hazard(ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY]);
+void create_rising_humidity_hazard(ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY]);
+void create_rising_pressure_hazard(ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY]);
+void create_worsening_air_quality_hazard(ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY]);
+void create_correct_previous_readings_list(ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY]);
+
+
+#endif

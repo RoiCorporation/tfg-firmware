@@ -28,38 +28,32 @@ set(PICO_BOARD pico2_w CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(wireless_station_firmware C CXX ASM)
+project(central_station_firmware C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
-add_executable(wireless_station_firmware 
-    src/wireless_station_firmware.c 
-    src/functions.c 
-    src/hazards.c
-    src/alerts.c
+add_executable(central_station_firmware 
+    src/central_station_firmware.c 
 )
 
-pico_set_program_name(wireless_station_firmware "wireless_station_firmware")
-pico_set_program_version(wireless_station_firmware "0.1")
+pico_set_program_name(central_station_firmware "central_station_firmware")
+pico_set_program_version(central_station_firmware "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(wireless_station_firmware 0)
-pico_enable_stdio_usb(wireless_station_firmware 1)
+pico_enable_stdio_uart(central_station_firmware 0)
+pico_enable_stdio_usb(central_station_firmware 1)
 
 # Add the standard library to the build
-target_link_libraries(wireless_station_firmware
+target_link_libraries(central_station_firmware
     pico_stdlib
-    hardware_i2c
-    hardware_pio
-    hardware_pwm
 )
 
 # Add the standard include files to the build
-target_include_directories(wireless_station_firmware PRIVATE
+target_include_directories(central_station_firmware PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
-pico_add_extra_outputs(wireless_station_firmware)
+pico_add_extra_outputs(central_station_firmware)
 

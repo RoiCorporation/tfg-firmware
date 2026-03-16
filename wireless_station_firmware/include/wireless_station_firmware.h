@@ -22,8 +22,18 @@ typedef struct {
 #define AMBIENT_INFO_FIELD_COUNT 5
 #define DHT22_PIN 0
 #define BUZZER_PIN 15
+
+/* I2C */
 #define SDA_PIN 4
 #define SCL_PIN 5
+
+/* SPI */
+#define CE_PIN 12
+#define CS_PIN 13
+#define SCK_PIN 18
+#define COPI_PIN 19
+#define CIPO_PIN 16
+
 #define MAX_TIMINGS 85
 #define I2C_BAUDRATE 100000
 #define LIGHT_SENSOR_I2C_ADDRESS 0x23

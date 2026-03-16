@@ -47,13 +47,18 @@ pico_enable_stdio_usb(central_station_firmware 1)
 
 # Add the standard library to the build
 target_link_libraries(central_station_firmware
+    PRIVATE
     pico_stdlib
+    nrf24_driver
 )
 
 # Add the standard include files to the build
-target_include_directories(central_station_firmware PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/include
+target_include_directories(central_station_firmware 
+    PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
+    ${CMAKE_CURRENT_LIST_DIR}/pico-nrf24-driver-main/lib/nrf24l01/
 )
 
-pico_add_extra_outputs(central_station_firmware)
+add_subdirectory(pico-nrf24-driver-main/lib)
 
+pico_add_extra_outputs(central_station_firmware)

@@ -54,10 +54,7 @@ int main() {
      * set addresses for DATA_PIPE_0 - DATA_PIPE_3.
      * These are addresses the transmitter will send its packets to.
      */
-    nrf24_module.rx_destination(DATA_PIPE_0, (uint8_t[]){0x37, 0x37, 0x37, 0x37, 0x37});
     nrf24_module.rx_destination(DATA_PIPE_1, (uint8_t[]){0xC7, 0xC7, 0xC7, 0xC7, 0xC7});
-    nrf24_module.rx_destination(DATA_PIPE_2, (uint8_t[]){0xC8, 0xC7, 0xC7, 0xC7, 0xC7});
-    nrf24_module.rx_destination(DATA_PIPE_3, (uint8_t[]){0xC9, 0xC7, 0xC7, 0xC7, 0xC7});
 
     // set to RX Mode
     nrf24_module.receiver_mode();
@@ -65,59 +62,22 @@ int main() {
     // data pipe number a packet was received on
     uint8_t pipe_number = 0;
 
-    // holds payload_zero sent by the transmitter
-    uint8_t payload_zero = 0;
-
     // holds payload_one sent by the transmitter
-    uint8_t payload_one[5];
+    uint8_t payload_one[6];
 
-    // two byte struct sent by transmitter
-    typedef struct payload_two_s {
-        uint8_t one;
-        uint8_t two;
-    } payload_two_t;
-
-    // holds payload_two struct sent by the transmitter
-    payload_two_t payload_two;
 
     while (1) {
         if (nrf24_module.is_packet(&pipe_number)) {
             switch (pipe_number) {
-            case DATA_PIPE_0:
-                // read payload
-                nrf24_module.read_packet(&payload_zero, sizeof(payload_zero));
 
-                // receiving a one byte uint8_t payload on DATA_PIPE_0
-                printf("\nPacket received:- Payload (%d) on data pipe (%d)\n", payload_zero, pipe_number);
-                break;
-
-            case DATA_PIPE_1:
-                // read payload
-                nrf24_module.read_packet(payload_one, sizeof(payload_one));
-
-                // receiving a five byte string payload on DATA_PIPE_1
-                printf("\nPacket received:- Payload (%s) on data pipe (%d)\n", payload_one, pipe_number);
-                break;
-
-            case DATA_PIPE_2:
-                // read payload
-                nrf24_module.read_packet(&payload_two, sizeof(payload_two));
-
-                // receiving a two byte struct payload on DATA_PIPE_2
-                printf("\nPacket received:- Payload (1: %d, 2: %d) on data pipe (%d)\n", payload_two.one, payload_two.two, pipe_number);
-                break;
-
-            case DATA_PIPE_3:
-                break;
-
-            case DATA_PIPE_4:
-                break;
-
-            case DATA_PIPE_5:
-                break;
-
-            default:
-                break;
+                case DATA_PIPE_1:
+                    // read payload
+                    nrf24_module.read_packet(payload_one, sizeof(payload_one));
+                    printf("Packet received: %s\n", payload_one);
+                    break;
+                    
+                default:
+                    break;
             }
         }
     }

@@ -41,6 +41,7 @@ typedef struct
 #define SCK_PIN 18
 #define COPI_PIN 19
 #define CIPO_PIN 16
+#define SPI_BAUDRATE 5000000
 
 /* FUNCTION DECLARATIONS */
 // Declarations for setup functions.

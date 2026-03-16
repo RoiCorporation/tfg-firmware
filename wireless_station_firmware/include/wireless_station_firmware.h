@@ -1,13 +1,12 @@
 #ifndef WIRELESS_STATION_FIRMWARE_H
 #define WIRELESS_STATION_FIRMWARE_H
 
-
-// === Aliases ===
+/* ALIASES */
 typedef unsigned int pin_t;
 
-
-// === Structs ===
-typedef struct {
+/* STRUCTS */
+typedef struct
+{
     float temperature;
     float humidity;
     float pressure;
@@ -15,25 +14,10 @@ typedef struct {
     float light_intensity;
 } ambient_info_t;
 
-
-// === Constants ===
-
-// Program constants.
+/* CONSTANTS*/
 #define AMBIENT_INFO_FIELD_COUNT 5
 #define DHT22_PIN 0
 #define BUZZER_PIN 15
-
-/* I2C */
-#define SDA_PIN 4
-#define SCL_PIN 5
-
-/* SPI */
-#define CE_PIN 12
-#define CS_PIN 17
-#define SCK_PIN 18
-#define COPI_PIN 19
-#define CIPO_PIN 16
-
 #define MAX_TIMINGS 85
 #define I2C_BAUDRATE 100000
 #define LIGHT_SENSOR_I2C_ADDRESS 0x23
@@ -47,9 +31,18 @@ typedef struct {
 #define AIR_QUALITY_WORSENING_MARGIN 2.0
 #define EPSILON 1e-5
 
+/* I2C */
+#define SDA_PIN 4
+#define SCL_PIN 5
 
-// === Function declarations ===
+/* SPI */
+#define CE_PIN 12
+#define CS_PIN 17
+#define SCK_PIN 18
+#define COPI_PIN 19
+#define CIPO_PIN 16
 
+/* FUNCTION DECLARATIONS */
 // Declarations for setup functions.
 void initialize_board();
 void initialize_i2c_bus();
@@ -57,6 +50,5 @@ void initialize_i2c_bus();
 // Declarations for functions related to sensor readings.
 int read_temperature_and_humidity(ambient_info_t *reading);
 int read_light_intensity(ambient_info_t *reading);
-
 
 #endif

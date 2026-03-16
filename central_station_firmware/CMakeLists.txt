@@ -36,6 +36,7 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 add_executable(central_station_firmware 
     src/central_station_firmware.c 
+    src/functions.c
 )
 
 pico_set_program_name(central_station_firmware "central_station_firmware")
@@ -49,6 +50,9 @@ pico_enable_stdio_usb(central_station_firmware 1)
 target_link_libraries(central_station_firmware
     PRIVATE
     pico_stdlib
+    hardware_i2c
+    hardware_pio
+    hardware_pwm
     nrf24_driver
 )
 

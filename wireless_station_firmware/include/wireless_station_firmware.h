@@ -29,7 +29,7 @@ typedef struct {
 
 /* SPI */
 #define CE_PIN 12
-#define CS_PIN 13
+#define CS_PIN 17
 #define SCK_PIN 18
 #define COPI_PIN 19
 #define CIPO_PIN 16

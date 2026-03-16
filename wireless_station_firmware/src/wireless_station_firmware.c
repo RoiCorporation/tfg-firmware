@@ -10,7 +10,6 @@
 #include "errors.h"
 
 
-
 int main() {
     
     initialize_board();

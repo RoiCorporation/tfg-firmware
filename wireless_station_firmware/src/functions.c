@@ -2,15 +2,27 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
+#include "nrf24_driver.h"
 #include "wireless_station_firmware.h"
 
 
 /**
  * @brief Initialize the different board components, such as stdio, I2C and GPIO.
  */
-void initialize_board() {
+void initialize_board(
+    nrf_client_t* nrf24_module,
+    uint8_t copi_pin,
+    uint8_t cipo_pin,
+    uint8_t sck_pin,
+    uint8_t cs_pin,
+    uint8_t ce_pin,
+    uint32_t spi_baudrate
+) {
     stdio_init_all();
     initialize_i2c_bus();
+    initialize_nrf24_module(
+        nrf24_module, copi_pin, cipo_pin, sck_pin, cs_pin, ce_pin, spi_baudrate
+    );
     gpio_init(DHT22_PIN);
     gpio_set_function(BUZZER_PIN, GPIO_FUNC_PWM);
     unsigned int slice_num = pwm_gpio_to_slice_num(BUZZER_PIN);
@@ -27,6 +39,49 @@ void initialize_i2c_bus() {
     gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(SDA_PIN);
     gpio_pull_up(SCL_PIN);
+}
+
+
+/**
+ * @brief Configure the nrf24l01 module.
+ * 
+ * @param nrf24_module pointer to the nrf24l01 module driver.
+ * @param copi_pin SPI COPI microcontroller pin.
+ * @param cipo_pin SPI CIPO microcontroller pin.
+ * @param sck_pin SPI SCK microcontroller pin.
+ * @param cs_pin SPI CS microcontroller pin.
+ * @param ce_pin SPI CE microcontroller pin.
+ * @param spi_baudrate SPI baudrate (in Herz).
+ */
+void initialize_nrf24_module(
+    nrf_client_t* nrf24_module,
+    uint8_t copi_pin,
+    uint8_t cipo_pin,
+    uint8_t sck_pin,
+    uint8_t cs_pin,
+    uint8_t ce_pin,
+    uint32_t spi_baudrate
+){
+    pin_manager_t nrf24_pins = { 
+        .copi = copi_pin,
+        .cipo = cipo_pin, 
+        .sck = sck_pin, 
+        .csn = cs_pin, 
+        .ce = ce_pin 
+    };
+
+    // Initialize the nrf24l01 module.
+    nrf_driver_create_client(nrf24_module);
+
+    // Configure GPIO pins and SPI baudrate.
+    nrf24_module->configure(&nrf24_pins, spi_baudrate);
+    
+    // Use default configuration and enable dynamic payloads.
+    nrf24_module->initialise(NULL);
+    nrf24_module->dyn_payloads_enable();
+
+    // Set to Standby-I Mode.
+    nrf24_module->standby_mode();
 }
 
 

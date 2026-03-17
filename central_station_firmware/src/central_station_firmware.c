@@ -24,13 +24,13 @@ int main() {
         .dyn_payloads = DYNPD_ENABLE,
 
         // data rate: RF_DR_250KBPS, RF_DR_1MBPS, RF_DR_2MBPS
-        .data_rate = RF_DR_1MBPS,
+        .data_rate = RF_DR_250KBPS,
 
         // RF_PWR_NEG_18DBM, RF_PWR_NEG_12DBM, RF_PWR_NEG_6DBM, RF_PWR_0DBM
         .power = RF_PWR_NEG_12DBM,
 
         // retransmission count: ARC_NONE...ARC_15RT
-        .retr_count = ARC_10RT,
+        .retr_count = ARC_2RT,
 
         // retransmission delay: ARD_250US, ARD_500US, ARD_750US, ARD_1000US
         .retr_delay = ARD_500US};

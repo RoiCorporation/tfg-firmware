@@ -76,9 +76,31 @@ void initialize_nrf24_module(
     // Configure GPIO pins and SPI baudrate.
     nrf24_module->configure(&nrf24_pins, spi_baudrate);
     
-    // Use default configuration and enable dynamic payloads.
-    nrf24_module->initialise(NULL);
-    nrf24_module->dyn_payloads_enable();
+    // Configure the specific parameters of the module.
+    nrf_manager_t nrf24_config = {
+        
+        // RF Channel.
+        .channel = 120,
+
+        // Set the address width to 5 bytes.
+        .address_width = AW_5_BYTES,
+
+        // Enable dynamic payloads.
+        .dyn_payloads = DYNPD_ENABLE,
+
+        // Set up a data rate of 250 KB/s.
+        .data_rate = RF_DR_250KBPS,
+
+        // -12dBm Tx output power.
+        .power = RF_PWR_NEG_12DBM,
+
+        // Retransmit packets 2 times.
+        .retr_count = ARC_2RT,
+
+        // Retransmission delay of 500μS.
+        .retr_delay = ARD_500US 
+    };
+    nrf24_module->initialise(&nrf24_config);
 
     // Set to Standby-I Mode.
     nrf24_module->standby_mode();

@@ -2,7 +2,7 @@
 #define TEST_FUNCTIONS_H
 
 
-#include "wireless_station_firmware.h"
+#include "central_station_firmware.h"
 
 
 // Function declarations.

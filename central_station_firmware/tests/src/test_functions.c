@@ -1,4 +1,4 @@
-#include "wireless_station_firmware.h"
+#include "central_station_firmware.h"
 #include "errors.h"
 
 

@@ -1,5 +1,5 @@
 #include "unity.h"
-#include "wireless_station_firmware.h"
+#include "central_station_firmware.h"
 #include "hazards.h"
 #include "test_functions.h"
 

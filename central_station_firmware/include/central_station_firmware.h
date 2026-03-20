@@ -2,7 +2,9 @@
 #define CENTRAL_STATION_FIRMWARE_H
 
 #include <stdint.h>
+#ifndef TEST
 #include "nrf24_driver.h"
+#endif
 
 /* ALIASES */
 typedef unsigned int pin_t;
@@ -47,6 +49,7 @@ typedef struct {
 
 /* FUNCTION DECLARATIONS */
 // Declarations for setup functions.
+#ifndef TEST
 void initialize_board(
     nrf_client_t* nrf24_module,
     uint8_t copi_pin,
@@ -71,6 +74,7 @@ void initialize_nrf24_module(
 int8_t read_temperature_and_humidity(ambient_info_t *reading);
 int8_t read_light_intensity(ambient_info_t *reading);
 int8_t receive_ambient_info(ambient_info_t *received_readings, nrf_client_t nrf24_module);
+#endif
 
 
 #endif

@@ -62,6 +62,7 @@ void initialize_nrf24_module(
     uint8_t ce_pin,
     uint32_t spi_baudrate
 ){
+    
     pin_manager_t nrf24_pins = { 
         .copi = copi_pin,
         .cipo = cipo_pin, 
@@ -69,38 +70,40 @@ void initialize_nrf24_module(
         .csn = cs_pin, 
         .ce = ce_pin 
     };
-
+    
     // Initialize the nrf24l01 module.
     nrf_driver_create_client(nrf24_module);
-
+    
     // Configure GPIO pins and SPI baudrate.
-    nrf24_module->configure(&nrf24_pins, spi_baudrate);
+    nrf24_module->configure(&nrf24_pins, 7000000);
     
     // Configure the specific parameters of the module.
     nrf_manager_t nrf24_config = {
-        
-        // RF Channel.
+        // RF Channel 
         .channel = 120,
 
-        // Set the address width to 5 bytes.
+        // AW_3_BYTES, AW_4_BYTES, AW_5_BYTES
         .address_width = AW_5_BYTES,
 
-        // Enable dynamic payloads.
+        // dynamic payloads: DYNPD_ENABLE, DYNPD_DISABLE
         .dyn_payloads = DYNPD_ENABLE,
 
-        // Set up a data rate of 250 KB/s.
+        // data rate: RF_DR_250KBPS, RF_DR_1MBPS, RF_DR_2MBPS
         .data_rate = RF_DR_250KBPS,
 
-        // -12dBm Tx output power.
+        // RF_PWR_NEG_18DBM, RF_PWR_NEG_12DBM, RF_PWR_NEG_6DBM, RF_PWR_0DBM
         .power = RF_PWR_NEG_12DBM,
 
-        // Retransmit packets 2 times.
+        // retransmission count: ARC_NONE...ARC_15RT
         .retr_count = ARC_2RT,
 
-        // Retransmission delay of 500μS.
+        // retransmission delay: ARD_250US, ARD_500US, ARD_750US, ARD_1000US
         .retr_delay = ARD_500US 
     };
+    
     nrf24_module->initialise(&nrf24_config);
+    // nrf24_module->initialise(NULL);
+    // nrf24_module->dyn_payloads_enable();
 
     // Set to Standby-I Mode.
     nrf24_module->standby_mode();

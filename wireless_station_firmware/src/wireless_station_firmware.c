@@ -27,6 +27,8 @@ int main() {
     // Configures all the protocols and pins in the board.
     initialize_board(&nrf24_module, COPI_PIN, CIPO_PIN, SCK_PIN, CS_PIN, CE_PIN, SPI_BAUDRATE);
 
+    while (!stdio_usb_connected()) sleep_ms(10);
+
     // Initialize the BH1750.
     uint8_t cmd = BH1750_CONT_H_RES_MODE;
     i2c_write_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, &cmd, 1, false);
@@ -68,22 +70,23 @@ int main() {
             activate_hazard_alert(hazard_code);
         }
 
+        uint8_t payload_one[6] = "Hello\0";
+
         // send to receiver's DATA_PIPE_1 address
         nrf24_module.tx_destination((uint8_t[]){0xC7,0xC7,0xC7,0xC7,0xC7});
 
-        // payload sent to receiver data pipe 1
-        uint8_t payload_one[6] = "Hello\0";
-
-        // result of packet transmission
-        fn_status_t success = 0;
-        success = nrf24_module.send_packet(payload_one, sizeof(payload_one));
-        if (success) {
-            printf("Packet sent: %s\n", payload_one);
-        } 
-        else {
-            printf("Packet not sent:- Receiver not available.\n");
-        }
+        // send packet to receiver's DATA_PIPE_1 address
+        fn_status_t success = nrf24_module.send_packet(payload_one, sizeof(payload_one));
         
+        if (success)
+        {
+        printf("\nPacket sent: %s\n", payload_one);
+
+        } else {
+
+        printf("\nPacket not sent:- Receiver not available.\n");
+        }
+            
         // Wait another full minute before reading sensors again.
         sleep_ms(1000); //sleep_ms(MINUTE_IN_MILLISECONDS)
     }

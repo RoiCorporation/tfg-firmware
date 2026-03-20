@@ -36,7 +36,7 @@ int main() {
         .retr_delay = ARD_500US};
 
     // SPI baudrate
-    uint32_t my_baudrate = 5000000;
+    uint32_t my_baudrate = 7000000;
 
     // provides access to driver functions
     nrf_client_t nrf24_module;
@@ -47,8 +47,12 @@ int main() {
     // configure GPIO pins and SPI
     nrf24_module.configure(&nrf24_pins, my_baudrate);
 
+    while (!stdio_usb_connected()) sleep_ms(10);
+
     // not using default configuration (my_nrf.initialise(NULL))
     nrf24_module.initialise(&nrf24_config);
+    // nrf24_module.initialise(NULL);
+    // nrf24_module.dyn_payloads_enable();
 
     /**
      * set addresses for DATA_PIPE_0 - DATA_PIPE_3.

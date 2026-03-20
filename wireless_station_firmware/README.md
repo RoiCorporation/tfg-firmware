@@ -24,10 +24,15 @@ the device from which to read.
 
 
 ## 🧪 Testing
-Unit tests should be run with the Ceedling tool from the
-[tests](tests/) folder.
+[Ceedling](https://github.com/throwtheswitch/ceedling) is used to
+run the test suite for this project. To install this tool, run:
 ```
-cd tests
+gem install ceedling
+```
+
+To run the tests for the wireless station firmware, go to the
+[tests](tests/) folder and run:
+```
 ceedling clean
 ceedling test:all
 ```

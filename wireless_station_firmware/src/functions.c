@@ -79,7 +79,6 @@ void initialize_nrf24_module(
     
     // Configure the specific parameters of the module.
     nrf_manager_t nrf24_config = {
-        
         .channel = 120,                 // RF Channel 120.
         .address_width = AW_5_BYTES,    // 5-byte address width.
         .dyn_payloads = DYNPD_ENABLE,   // Dynamic payloads enabled.
@@ -184,8 +183,7 @@ int8_t read_light_intensity(ambient_info_t *reading) {
  * @brief Transmit the ambient data points taken by the sensors using the 
  * radio module.
  * 
- * @param reading pointer to an ambient_info_t struct where the read values to 
- * send are stored.
+ * @param reading ambient_info_t struct where the read values to send are stored.
  * @param nrf24_module instance of the nrf24l01 driver with which the packet
  * will be sent.
  * @return int8_t 0 if the packet was sent successfully, else -1.

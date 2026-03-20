@@ -28,8 +28,8 @@ unsigned int analyze_hazards(ambient_info_t previous_readings[LENGTH_PREVIOUS_RE
             ((previous_readings[i].humidity - previous_readings[i - 1].humidity) < (HUMIDITY_INCREASE_MARGIN - EPSILON)))
             is_humidity_rising = false;
         if (!is_pressure_rising || 
-            (previous_readings[i].pressure <= previous_readings[i - 1].pressure) ||
-            ((previous_readings[i].pressure - previous_readings[i - 1].pressure) < (PRESSURE_INCREASE_MARGIN - EPSILON)))
+            (previous_readings[i].air_pressure <= previous_readings[i - 1].air_pressure) ||
+            ((previous_readings[i].air_pressure - previous_readings[i - 1].air_pressure) < (PRESSURE_INCREASE_MARGIN - EPSILON)))
             is_pressure_rising = false;
         if (!is_air_quality_worsening || 
             (previous_readings[i].air_quality_index >= previous_readings[i - 1].air_quality_index) ||

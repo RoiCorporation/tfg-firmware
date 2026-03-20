@@ -31,7 +31,7 @@
 void activate_hazard_alert(unsigned int hazard_code);
 void play_temperature_hazard_alarm(unsigned int slice, unsigned int channel);
 void play_humidity_hazard_alarm(unsigned int slice, unsigned int channel);
-void play_pressure_hazard_alarm(unsigned int slice, unsigned int channel);
+void play_air_pressure_hazard_alarm(unsigned int slice, unsigned int channel);
 void play_air_quality_index_hazard_alarm(unsigned int slice, unsigned int channel);
 
 

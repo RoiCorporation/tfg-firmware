@@ -1,47 +1,41 @@
 #include "stdio.h"
+#include <math.h>
+#include "pico/stdlib.h"
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
+#include "nrf24_driver.h"
+#include "central_station_firmware.h"
 
-#define UART_ID uart1
-#define BAUD_RATE 9600
-
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
-#define M0_PIN 2
-#define M1_PIN 3
-#define AUX_PIN 16
 
 int main() {
-    stdio_init_all();
 
-    // Configure mode pins
-    gpio_init(M0_PIN);
-    gpio_init(M1_PIN);
-    gpio_set_dir(M0_PIN, GPIO_OUT);
-    gpio_set_dir(M1_PIN, GPIO_OUT);
-    gpio_put(M0_PIN, 0);
-    gpio_put(M1_PIN, 0);  // Normal mode (M1=0, M0=0)
+    // Instance of the nrf24l01 module driver.
+    nrf_client_t nrf24_module;
+    
+    ambient_info_t wireless_station_info;
 
-    // UART setup
-    uart_init(UART_ID, BAUD_RATE);
-    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+    // Configure all the protocols and pins in the board.
+    initialize_board(&nrf24_module, COPI_PIN, CIPO_PIN, SCK_PIN, CS_PIN, CE_PIN, SPI_BAUDRATE);
 
-    uart_set_format(UART_ID, 8, 1, UART_PARITY_NONE);
-    uart_set_fifo_enabled(UART_ID, true);
+    while (!stdio_usb_connected()) sleep_ms(10);
+    
+    while (1) {
+        wireless_station_info.temperature = NAN;
+        wireless_station_info.humidity = NAN;
+        wireless_station_info.light_intensity = NAN;
+        wireless_station_info.air_pressure = NAN;
+        wireless_station_info.air_quality_index = NAN;
 
-    while (true) {
-        // Send
-        char *msg = "Hello LoRa!\n";
-        uart_puts(UART_ID, msg);
+        receive_ambient_info(&wireless_station_info, nrf24_module);
 
-        // Read if available
-        if (uart_is_readable(UART_ID)) {
-            char c = uart_getc(UART_ID);
-            printf("Received: %c\n", c);
-        }
+        printf("Temperature: %f\n", wireless_station_info.temperature);
+        printf("Humidity: %f\n", wireless_station_info.humidity);
+        printf("Light intensity: %f\n", wireless_station_info.light_intensity);
+        printf("Pressure: %f\n", wireless_station_info.air_pressure);
+        printf("Air quality index: %f\n", wireless_station_info.air_quality_index);
 
         sleep_ms(1000);
     }
+
 }

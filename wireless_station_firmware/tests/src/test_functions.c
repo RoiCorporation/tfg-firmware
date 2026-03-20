@@ -11,7 +11,7 @@ void clean_previous_readings_list(ambient_info_t previous_readings[LENGTH_PREVIO
     for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
         previous_readings[i].temperature = 0.0;
         previous_readings[i].humidity = 0.0;
-        previous_readings[i].pressure = 0.0;
+        previous_readings[i].air_pressure = 0.0;
         previous_readings[i].air_quality_index = 0.0;
         previous_readings[i].light_intensity = 0.0;
     }
@@ -29,7 +29,7 @@ void create_rising_temperature_hazard(ambient_info_t previous_readings[LENGTH_PR
   for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
     previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN);
     previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN - 0.05);
-    previous_readings[i].pressure = previous_readings[i - 1].pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
+    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN - 0.05);
   }
 }
@@ -46,14 +46,14 @@ void create_rising_humidity_hazard(ambient_info_t previous_readings[LENGTH_PREVI
   for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
     previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN);
-    previous_readings[i].pressure = previous_readings[i - 1].pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
+    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN - 0.05);
   }
 }
 
 
 /**
- * @brief Construct a list of prior readings that presents a hazard due to increasing air pressure.
+ * @brief Construct a list of prior readings that presents a hazard due to increasing air air_pressure.
  * 
  * @param previous_readings the previous readings list where the test data will be stored.
  */
@@ -63,7 +63,7 @@ void create_rising_pressure_hazard(ambient_info_t previous_readings[LENGTH_PREVI
   for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
     previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN - 0.05);
-    previous_readings[i].pressure = previous_readings[i - 1].pressure + (PRESSURE_INCREASE_MARGIN);
+    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN);
     previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN - 0.05);
   }
 }
@@ -81,7 +81,7 @@ void create_worsening_air_quality_hazard(ambient_info_t previous_readings[LENGTH
   for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
     previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN - 0.05);
-    previous_readings[i].pressure = previous_readings[i - 1].pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
+    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN);
   }
 }
@@ -98,7 +98,7 @@ void create_correct_previous_readings_list(ambient_info_t previous_readings[LENG
   for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
     previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN - 0.05);
-    previous_readings[i].pressure = previous_readings[i - 1].pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
+    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN - 0.05);
   }
 }

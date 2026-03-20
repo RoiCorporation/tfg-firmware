@@ -1,5 +1,5 @@
 #include "unity.h"
-#include "wireless_station_firmware.h"
+#include "central_station_firmware.h"
 #include "hazards.h"
 #include "test_functions.h"
 
@@ -24,9 +24,9 @@ void test_analyze_hazards_continuously_incrementing_parameters(void) {
   TEST_ASSERT_EQUAL_INT(HUMIDITY_RISING_HAZARD, analyze_hazards(previous_readings));
 
   // TODO: Uncomment these last two cases when the firmware is ready to 
-  // read the pressure and air quality data.
+  // read the air_pressure and air quality data.
   // Test with a list of previous readings that poses a hazard due to
-  // air pressure rising continuously above the established safeguard.
+  // air air_pressure rising continuously above the established safeguard.
   // create_rising_pressure_hazard(previous_readings);
   // TEST_ASSERT_EQUAL_INT(PRESSURE_RISING_HAZARD, analyze_hazards(previous_readings));
 
@@ -65,9 +65,9 @@ void test_analyze_hazards_breaking_incrementing_parameter_series(void) {
       case 2:
         create_rising_pressure_hazard(previous_readings);
         for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
-          previous_readings[j].pressure += 0.1;
+          previous_readings[j].air_pressure += 0.1;
           TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
-          previous_readings[j].pressure -= 0.1;
+          previous_readings[j].air_pressure -= 0.1;
         }
         break;
       case 3:

@@ -25,7 +25,7 @@ void activate_hazard_alert(unsigned int hazard_code) {
             play_humidity_hazard_alarm(slice, channel);
             break;
         case PRESSURE_RISING_HAZARD:
-            play_pressure_hazard_alarm(slice, channel);
+            play_air_pressure_hazard_alarm(slice, channel);
             break;
         case AIR_QUALITY_WORSENING_HAZARD:
             play_air_quality_index_hazard_alarm(slice, channel);
@@ -88,12 +88,12 @@ void play_humidity_hazard_alarm(unsigned int slice, unsigned int channel) {
 
 
 /**
- * @brief Use the buzzer to play the alarm specific to the rising pressure hazard.
+ * @brief Use the buzzer to play the alarm specific to the rising air pressure hazard.
  * 
  * @param slice the PWM slice number for the buzzer pin.
  * @param channel the PWM channel number for the buzzer pin.
  */
-void play_pressure_hazard_alarm(unsigned int slice, unsigned int channel) {
+void play_air_pressure_hazard_alarm(unsigned int slice, unsigned int channel) {
     unsigned int frequencies[2] = {NOTE_B4, NOTE_F5};
     float clkdiv = 4.0f;
 

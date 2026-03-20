@@ -50,16 +50,21 @@ pico_enable_stdio_usb(wireless_station_firmware 1)
 
 # Add the standard library to the build
 target_link_libraries(wireless_station_firmware
+    PRIVATE
     pico_stdlib
     hardware_i2c
     hardware_pio
     hardware_pwm
+    nrf24_driver
 )
 
 # Add the standard include files to the build
-target_include_directories(wireless_station_firmware PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/include
+target_include_directories(wireless_station_firmware 
+    PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
+    ${CMAKE_CURRENT_LIST_DIR}/pico-nrf24-driver-main/lib/nrf24l01/
 )
 
-pico_add_extra_outputs(wireless_station_firmware)
+add_subdirectory(pico-nrf24-driver-main/lib)
 
+pico_add_extra_outputs(wireless_station_firmware)

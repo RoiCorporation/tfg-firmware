@@ -36,6 +36,7 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 add_executable(central_station_firmware 
     src/central_station_firmware.c 
+    src/functions.c
 )
 
 pico_set_program_name(central_station_firmware "central_station_firmware")
@@ -47,13 +48,21 @@ pico_enable_stdio_usb(central_station_firmware 1)
 
 # Add the standard library to the build
 target_link_libraries(central_station_firmware
+    PRIVATE
     pico_stdlib
+    hardware_i2c
+    hardware_pio
+    hardware_pwm
+    nrf24_driver
 )
 
 # Add the standard include files to the build
-target_include_directories(central_station_firmware PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/include
+target_include_directories(central_station_firmware 
+    PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
+    ${CMAKE_CURRENT_LIST_DIR}/pico-nrf24-driver-main/lib/nrf24l01/
 )
 
-pico_add_extra_outputs(central_station_firmware)
+add_subdirectory(pico-nrf24-driver-main/lib)
 
+pico_add_extra_outputs(central_station_firmware)

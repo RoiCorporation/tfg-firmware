@@ -101,9 +101,11 @@
   :source:
     - ../src/**
     - src/**
+    - ../pico-nrf24-driver-main/lib/nrf24l01/**
   :include:
     - ../include/**
     - include/**
+    - ../pico-nrf24-driver-main/lib/nrf24l01/**
   :libraries: []
 
 # You can even specify specific files to add or remove from your test

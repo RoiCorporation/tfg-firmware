@@ -219,7 +219,7 @@ fn_status_t nrf_driver_initialise(nrf_manager_t *user_config) {
 
   nrf_manager_t *config = &(nrf_driver.user_config);
 
-  fn_status_t status = ERROR;
+  fn_status_t status = NRF_MNGR_OK;
 
   // if nrf_manager_t user_config !== NULL
   if (user_config != NULL)

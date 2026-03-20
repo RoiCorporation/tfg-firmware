@@ -24,7 +24,7 @@ int main() {
     // Instance of the nrf24l01 module driver.
     nrf_client_t nrf24_module;
 
-    // Configures all the protocols and pins in the board.
+    // Configure all the protocols and pins in the board.
     initialize_board(&nrf24_module, COPI_PIN, CIPO_PIN, SCK_PIN, CS_PIN, CE_PIN, SPI_BAUDRATE);
 
     while (!stdio_usb_connected()) sleep_ms(10);
@@ -38,9 +38,9 @@ int main() {
     while (1) {
         sensor_readings.temperature = NAN;
         sensor_readings.humidity = NAN;
-        sensor_readings.pressure = NAN;
-        sensor_readings.air_quality_index = NAN;
         sensor_readings.light_intensity = NAN;
+        sensor_readings.air_pressure = NAN;
+        sensor_readings.air_quality_index = NAN;
 
         if (read_temperature_and_humidity(&sensor_readings) == -1) {
             printf("Error when reading the temperature and humidity sensor. Error number %d\n",

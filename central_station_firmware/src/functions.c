@@ -204,7 +204,7 @@ int8_t receive_ambient_info(ambient_info_t *received_readings, nrf_client_t nrf2
                 received_readings->temperature = payload[0];
                 received_readings->humidity = payload[1];
                 received_readings->light_intensity = payload[2];
-                received_readings->pressure = payload[3];
+                received_readings->air_pressure = payload[3];
                 received_readings->air_quality_index = payload[4];
                 return (int8_t)0;
             }

@@ -8,13 +8,12 @@
 typedef unsigned int pin_t;
 
 /* STRUCTS */
-typedef struct
-{
+typedef struct {
     float temperature;
     float humidity;
-    float pressure;
-    float air_quality_index;
     float light_intensity;
+    float air_pressure;
+    float air_quality_index;
 } ambient_info_t;
 
 /* CONSTANTS*/

@@ -24,7 +24,7 @@ int main() {
         wireless_station_info.temperature = NAN;
         wireless_station_info.humidity = NAN;
         wireless_station_info.light_intensity = NAN;
-        wireless_station_info.pressure = NAN;
+        wireless_station_info.air_pressure = NAN;
         wireless_station_info.air_quality_index = NAN;
 
         receive_ambient_info(&wireless_station_info, nrf24_module);
@@ -32,7 +32,7 @@ int main() {
         printf("Temperature: %f\n", wireless_station_info.temperature);
         printf("Humidity: %f\n", wireless_station_info.humidity);
         printf("Light intensity: %f\n", wireless_station_info.light_intensity);
-        printf("Pressure: %f\n", wireless_station_info.pressure);
+        printf("Pressure: %f\n", wireless_station_info.air_pressure);
         printf("Air quality index: %f\n", wireless_station_info.air_quality_index);
 
         sleep_ms(1000);

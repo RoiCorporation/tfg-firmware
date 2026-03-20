@@ -163,11 +163,11 @@ int8_t read_temperature_and_humidity(ambient_info_t *reading) {
  * @return int8_t 0 if the reading was successful, else -1.
  */
 int8_t read_light_intensity(ambient_info_t *reading) {
-    // Tries to read 2 bytes.
+    // Try to read 2 bytes.
     uint8_t buf[2];
     int bytes_read = i2c_read_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, buf, 2, false);
 
-    // If successful, calculates the actual light intensity in lux. Else, return -1.
+    // If successful, calculate the actual light intensity in lux. Else, return -1.
     if (bytes_read == 2) {
         uint16_t raw = (buf[0] << 8) | buf[1];
         float lux = raw / 1.2f;
@@ -194,7 +194,7 @@ int8_t transmit_ambient_info(ambient_info_t reading, nrf_client_t nrf24_module) 
         reading.temperature,
         reading.humidity,
         reading.light_intensity,
-        reading.pressure,
+        reading.air_pressure,
         reading.air_quality_index
     };
 

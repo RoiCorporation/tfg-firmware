@@ -1,6 +1,9 @@
 #ifndef CENTRAL_STATION_FIRMWARE_H
 #define CENTRAL_STATION_FIRMWARE_H
 
+#include <stdint.h>
+#include "nrf24_driver.h"
+
 /* ALIASES */
 typedef unsigned int pin_t;
 
@@ -15,7 +18,7 @@ typedef struct
 } ambient_info_t;
 
 /* CONSTANTS*/
-#define AMBIENT_INFO_FIELD_COUNT 5
+#define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
 #define DHT22_PIN 0
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
@@ -45,11 +48,30 @@ typedef struct
 
 /* FUNCTION DECLARATIONS */
 // Declarations for setup functions.
-void initialize_board();
+void initialize_board(
+    nrf_client_t* nrf24_module,
+    uint8_t copi_pin,
+    uint8_t cipo_pin,
+    uint8_t sck_pin,
+    uint8_t cs_pin,
+    uint8_t ce_pin,
+    uint32_t spi_baudrate
+);
 void initialize_i2c_bus();
+void initialize_nrf24_module(
+    nrf_client_t* nrf24_module,
+    uint8_t copi_pin,
+    uint8_t cipo_pin,
+    uint8_t sck_pin,
+    uint8_t cs_pin,
+    uint8_t ce_pin,
+    uint32_t spi_baudrate
+);
 
 // Declarations for functions related to sensor readings.
-int read_temperature_and_humidity(ambient_info_t *reading);
-int read_light_intensity(ambient_info_t *reading);
+int8_t read_temperature_and_humidity(ambient_info_t *reading);
+int8_t read_light_intensity(ambient_info_t *reading);
+int8_t receive_ambient_info(ambient_info_t *received_readings, nrf_client_t nrf24_module);
+
 
 #endif

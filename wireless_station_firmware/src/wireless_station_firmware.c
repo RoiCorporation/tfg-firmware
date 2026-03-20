@@ -70,21 +70,12 @@ int main() {
             activate_hazard_alert(hazard_code);
         }
 
-        uint8_t payload_one[6] = "Hello\0";
-
-        // send to receiver's DATA_PIPE_1 address
-        nrf24_module.tx_destination((uint8_t[]){0xC7,0xC7,0xC7,0xC7,0xC7});
-
-        // send packet to receiver's DATA_PIPE_1 address
-        fn_status_t success = nrf24_module.send_packet(payload_one, sizeof(payload_one));
-        
-        if (success)
-        {
-        printf("\nPacket sent: %s\n", payload_one);
-
-        } else {
-
-        printf("\nPacket not sent:- Receiver not available.\n");
+        if (transmit_ambient_info(sensor_readings, nrf24_module) == -1) {
+            printf("Error when sending the sensor readings. Error number %d\n", 
+                DATA_TRANSMIT_ERROR);
+        }
+        else {
+            printf("Packet transmitted successfully.\n");
         }
             
         // Wait another full minute before reading sensors again.

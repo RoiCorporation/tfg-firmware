@@ -79,26 +79,14 @@ void initialize_nrf24_module(
     
     // Configure the specific parameters of the module.
     nrf_manager_t nrf24_config = {
-        // RF Channel 
-        .channel = 120,
-
-        // AW_3_BYTES, AW_4_BYTES, AW_5_BYTES
-        .address_width = AW_5_BYTES,
-
-        // dynamic payloads: DYNPD_ENABLE, DYNPD_DISABLE
-        .dyn_payloads = DYNPD_ENABLE,
-
-        // data rate: RF_DR_250KBPS, RF_DR_1MBPS, RF_DR_2MBPS
-        .data_rate = RF_DR_250KBPS,
-
-        // RF_PWR_NEG_18DBM, RF_PWR_NEG_12DBM, RF_PWR_NEG_6DBM, RF_PWR_0DBM
-        .power = RF_PWR_NEG_12DBM,
-
-        // retransmission count: ARC_NONE...ARC_15RT
-        .retr_count = ARC_2RT,
-
-        // retransmission delay: ARD_250US, ARD_500US, ARD_750US, ARD_1000US
-        .retr_delay = ARD_500US 
+        
+        .channel = 120,                 // RF Channel 120.
+        .address_width = AW_5_BYTES,    // 5-byte address width.
+        .dyn_payloads = DYNPD_ENABLE,   // Dynamic payloads enabled.
+        .data_rate = RF_DR_250KBPS,     // 250 KB/s data rate.
+        .power = RF_PWR_NEG_12DBM,      // -12dBm Tx output power.
+        .retr_count = ARC_2RT,          // 2 packet retransmissions.
+        .retr_delay = ARD_500US         // 500μS retransmission delay.
     };
     
     nrf24_module->initialise(&nrf24_config);
@@ -113,10 +101,11 @@ void initialize_nrf24_module(
 /**
  * @brief Read temperature and humidity from the DHT22 sensor.
  * 
- * @param reading pointer to an ambient_info_t struct where the read values will be stored.
- * @return int 0 if the reading was successful, else -1.
+ * @param reading pointer to an ambient_info_t struct where the read values 
+ * will be stored.
+ * @return int8_t 0 if the reading was successful, else -1.
  */
-int read_temperature_and_humidity(ambient_info_t *reading) {
+int8_t read_temperature_and_humidity(ambient_info_t *reading) {
     int data[5] = {0, 0, 0, 0, 0};
     uint j = 0;
     uint last = 1;
@@ -158,22 +147,23 @@ int read_temperature_and_humidity(ambient_info_t *reading) {
 
         if (data[2] & 0x80) reading->temperature = -reading->temperature; // Negative temp.
 
-        return 0;
+        return (int8_t)0;
     }
 
     reading->temperature = NAN;
     reading->humidity = NAN;
-    return -1;
+    return (int8_t)-1;
 }
 
 
 /**
  * @brief Read light intensity from the light sensor.
  * 
- * @param reading pointer to an ambient_info_t struct where the read values will be stored.
- * @return int 0 if the reading was successful, else -1.
+ * @param reading pointer to an ambient_info_t struct where the read values 
+ * will be stored.
+ * @return int8_t 0 if the reading was successful, else -1.
  */
-int read_light_intensity(ambient_info_t *reading) {
+int8_t read_light_intensity(ambient_info_t *reading) {
     // Tries to read 2 bytes.
     uint8_t buf[2];
     int bytes_read = i2c_read_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, buf, 2, false);
@@ -183,8 +173,39 @@ int read_light_intensity(ambient_info_t *reading) {
         uint16_t raw = (buf[0] << 8) | buf[1];
         float lux = raw / 1.2f;
         reading->light_intensity = lux;
-        return 0;
+        return (int8_t)0;
     } 
     
-    return -1;
+    return (int8_t)-1;
+}
+
+
+/**
+ * @brief Transmit the ambient data points taken by the sensors using the 
+ * radio module.
+ * 
+ * @param reading pointer to an ambient_info_t struct where the read values to 
+ * send are stored.
+ * @param nrf24_module instance of the nrf24l01 driver with which the packet
+ * will be sent.
+ * @return int8_t 0 if the packet was sent successfully, else -1.
+ */
+int8_t transmit_ambient_info(ambient_info_t reading, nrf_client_t nrf24_module) {
+
+    float payload[sizeof(ambient_info_t) / sizeof(float)] = {
+        reading.temperature,
+        reading.humidity,
+        reading.light_intensity,
+        reading.pressure,
+        reading.air_quality_index
+    };
+
+    // send to receiver's DATA_PIPE_1 address
+    nrf24_module.tx_destination((uint8_t[]){0xC7,0xC7,0xC7,0xC7,0xC7});
+
+    // Check that the packet is transmitted successfully.
+    if (nrf24_module.send_packet(&payload, sizeof(payload)) != 0)
+        return (int8_t)0;
+
+    return (int8_t)-1;
 }

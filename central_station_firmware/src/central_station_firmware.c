@@ -63,26 +63,22 @@ int main() {
     // set to RX Mode
     nrf24_module.receiver_mode();
 
-    // data pipe number a packet was received on
-    uint8_t pipe_number = 0;
-
     // holds payload_one sent by the transmitter
-    uint8_t payload_one[6];
-
+    int payload_array_size = sizeof(ambient_info_t) / sizeof(float);
+    float payload[payload_array_size];
 
     while (1) {
-        if (nrf24_module.is_packet(&pipe_number)) {
-            switch (pipe_number) {
-
-                case DATA_PIPE_1:
-                    // read payload
-                    nrf24_module.read_packet(payload_one, sizeof(payload_one));
-                    printf("Packet received: %s\n", payload_one);
-                    break;
-                    
-                default:
-                    break;
+        if (nrf24_module.is_packet(NULL)) {
+            if (nrf24_module.read_packet(&payload, sizeof(payload)) == 0) {
+                printf("Error receiving\n");
+            }
+            else {
+                printf("Packet received\n");
+                for (int i = 0; i < payload_array_size; i++) {
+                    printf("%d: %f\n", i, payload[i]);
+                }
             }
         }
     }
+
 }

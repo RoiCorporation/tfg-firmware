@@ -1,6 +1,7 @@
 #ifndef WIRELESS_STATION_FIRMWARE_H
 #define WIRELESS_STATION_FIRMWARE_H
 
+#include <stdint.h>
 #include "nrf24_driver.h"
 
 /* ALIASES */
@@ -17,7 +18,7 @@ typedef struct
 } ambient_info_t;
 
 /* CONSTANTS*/
-#define AMBIENT_INFO_FIELD_COUNT 5
+#define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
 #define DHT22_PIN 0
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
@@ -68,7 +69,9 @@ void initialize_nrf24_module(
 );
 
 // Declarations for functions related to sensor readings.
-int read_temperature_and_humidity(ambient_info_t *reading);
-int read_light_intensity(ambient_info_t *reading);
+int8_t read_temperature_and_humidity(ambient_info_t *reading);
+int8_t read_light_intensity(ambient_info_t *reading);
+int8_t transmit_ambient_info(ambient_info_t reading, nrf_client_t nrf24_module);
+
 
 #endif

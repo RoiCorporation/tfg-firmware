@@ -4,6 +4,7 @@
 #include <stdint.h>
 #ifndef TEST
 #include "nrf24_driver.h"
+#include "aes.h"
 #endif
 
 /* ALIASES */
@@ -47,6 +48,15 @@ typedef struct {
 #define CIPO_PIN 16
 #define SPI_BAUDRATE 5000000
 
+/* AES-256 CRT */
+static const uint8_t AES_256_KEY[32] = {
+    0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
+    0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 
+};
+static const uint8_t AES_256_IV[16] = { 
+    0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff 
+};
+
 /* FUNCTION DECLARATIONS */
 // Declarations for setup functions.
 #ifndef TEST
@@ -74,7 +84,14 @@ void initialize_nrf24_module(
 // Declarations for functions related to sensor readings.
 int8_t read_temperature_and_humidity(ambient_info_t *reading);
 int8_t read_light_intensity(ambient_info_t *reading);
-int8_t transmit_ambient_info(ambient_info_t reading, nrf_client_t nrf24_module);
+int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]);
+void encrypt_ambient_info_message(
+    ambient_info_t reading,
+    struct AES_ctx aes_ctx,
+    const uint8_t aes_key[],
+    const uint8_t aes_iv[],
+    uint8_t message[]
+);
 #endif
 
 

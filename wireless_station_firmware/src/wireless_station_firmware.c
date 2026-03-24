@@ -4,6 +4,7 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "nrf24_driver.h"
+#include "aes.h"
 #include "wireless_station_firmware.h"
 #include "hazards.h"
 #include "alerts.h"
@@ -21,8 +22,13 @@ int main() {
     // hazards, such as a flood, a sudden fire or a gas leak.
     ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
     
-    // Instance of the nrf24l01 module driver.
+    // NRF24L01 module driver.
     nrf_client_t nrf24_module;
+
+    // AES encryption engine context.
+    struct AES_ctx aes_ctx;
+
+    uint8_t radio_message[sizeof(ambient_info_t)];
 
     // Configure all the protocols and pins in the board.
     initialize_board(&nrf24_module, COPI_PIN, CIPO_PIN, SCK_PIN, CS_PIN, CE_PIN, SPI_BAUDRATE);
@@ -70,14 +76,17 @@ int main() {
             activate_hazard_alert(hazard_code);
         }
 
-        if (transmit_ambient_info(sensor_readings, nrf24_module) == -1) {
+        encrypt_ambient_info_message(
+            sensor_readings, aes_ctx, AES_256_KEY, AES_256_IV, radio_message);
+
+        if (transmit_radio_message(nrf24_module, radio_message) == -1) {
             printf("Error when sending the sensor readings. Error number %d\n", 
                 DATA_TRANSMIT_ERROR);
         }
         else {
             printf("Packet transmitted successfully.\n");
         }
-            
+        printf("\n");
         // Wait another full minute before reading sensors again.
         sleep_ms(1000); //sleep_ms(MINUTE_IN_MILLISECONDS)
     }

@@ -37,6 +37,8 @@ pico_sdk_init()
 add_executable(central_station_firmware 
     src/central_station_firmware.c 
     src/functions.c
+    src/hazards.c
+    src/alerts.c
 )
 
 pico_set_program_name(central_station_firmware "central_station_firmware")
@@ -54,6 +56,7 @@ target_link_libraries(central_station_firmware
     hardware_pio
     hardware_pwm
     nrf24_driver
+    tiny-aes
 )
 
 # Add the standard include files to the build
@@ -61,8 +64,10 @@ target_include_directories(central_station_firmware
     PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/include
     ${CMAKE_CURRENT_LIST_DIR}/pico-nrf24-driver-main/lib/nrf24l01/
+    ${CMAKE_CURRENT_LIST_DIR}/tiny-AES-c-master/
 )
 
 add_subdirectory(pico-nrf24-driver-main/lib)
+add_subdirectory(tiny-AES-c-master)
 
 pico_add_extra_outputs(central_station_firmware)

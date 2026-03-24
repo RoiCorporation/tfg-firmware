@@ -1,4 +1,5 @@
 #include <math.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
@@ -179,18 +180,44 @@ int8_t read_light_intensity(ambient_info_t *reading) {
 }
 
 
-/**
- * @brief Transmit the ambient data points taken by the sensors using the 
- * radio module.
- * 
- * @param reading ambient_info_t struct where the read values to send are stored.
- * @param nrf24_module instance of the nrf24l01 driver with which the packet
- * will be sent.
- * @return int8_t 0 if the packet was sent successfully, else -1.
- */
-int8_t transmit_ambient_info(ambient_info_t reading, nrf_client_t nrf24_module) {
+ /**
+  * @brief Transmit an encrypted radio message that contains the station's sensor
+  * readings.
+  * 
+  * @param nrf24_module instance of the nrf24l01 driver with which the packet 
+  * will be sent.
+  * @param message array that contains the encrypted message to send.
+  * @return int8_t 0 if the radio message was sent successfully, else -1.
+  */
+int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
 
-    float payload[sizeof(ambient_info_t) / sizeof(float)] = {
+    // send to receiver's DATA_PIPE_1 address
+    nrf24_module.tx_destination((uint8_t[]){0xC7,0xC7,0xC7,0xC7,0xC7});
+    if (nrf24_module.send_packet(message, sizeof(ambient_info_t)) != 0)
+        return (int8_t)0;
+
+    return (int8_t)-1;
+}
+
+
+/**
+ * @brief Create an encrypted message from the readings of the sensors.
+ * 
+ * @param reading structure of sensor readings to include in the radio message.
+ * @param aes_ctx AES decryption engine context.
+ * @param aes_key encryption key needed to encrypt the message.
+ * @param aes_iv initialization vector.
+ * @param message array where the encrypted message will be stored.
+ */
+void encrypt_ambient_info_message(
+    ambient_info_t reading,
+    struct AES_ctx aes_ctx,
+    const uint8_t aes_key[],
+    const uint8_t aes_iv[],
+    uint8_t message[]
+) {
+
+    float ambient_values_array[] = {
         reading.temperature,
         reading.humidity,
         reading.light_intensity,
@@ -198,12 +225,11 @@ int8_t transmit_ambient_info(ambient_info_t reading, nrf_client_t nrf24_module) 
         reading.air_quality_index
     };
 
-    // send to receiver's DATA_PIPE_1 address
-    nrf24_module.tx_destination((uint8_t[]){0xC7,0xC7,0xC7,0xC7,0xC7});
+    uint8_t payload[sizeof(ambient_values_array)];
+    memcpy(payload, ambient_values_array, sizeof(ambient_values_array));
+    
+    AES_init_ctx_iv(&aes_ctx, aes_key, aes_iv);
+    AES_CTR_xcrypt_buffer(&aes_ctx, payload, sizeof(payload));
 
-    // Check that the packet is transmitted successfully.
-    if (nrf24_module.send_packet(&payload, sizeof(payload)) != 0)
-        return (int8_t)0;
-
-    return (int8_t)-1;
+    memcpy(message, payload, sizeof(payload));
 }

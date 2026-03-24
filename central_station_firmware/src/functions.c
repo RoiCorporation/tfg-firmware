@@ -1,8 +1,10 @@
 #include <math.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
 #include "nrf24_driver.h"
+#include "aes.h"
 #include "central_station_firmware.h"
 
 
@@ -183,33 +185,58 @@ int8_t read_light_intensity(ambient_info_t *reading) {
 }
 
 
-/**
- * @brief Receive the ambient data points taken by a wireless station using the 
- * radio module.
- * 
- * @param reading pointer to an ambient_info_t struct where the ambient info
- * received from the wireless station will be stored.
- * @param nrf24_module instance of the nrf24l01 driver with which the packet
- * will be received.
- * @return int8_t 0 if the packet was received successfully, else -1.
- */
-int8_t receive_ambient_info(ambient_info_t *received_readings, nrf_client_t nrf24_module) {
-
-    int payload_array_size = sizeof(ambient_info_t) / sizeof(float);
-    float payload[payload_array_size];
+ /**
+  * @brief Receive and store an encrypted radio message that contains the 
+  * sensor readings of a linked wireless station.
+  * 
+  * @param nrf24_module instance of the nrf24l01 driver with which the packet 
+  * will be received.
+  * @param message array where the received message is stored.
+  * @return int8_t 0 if the radio message was received successfully, else -1.
+  */
+int8_t receive_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
     
     while (1) {
-        if (nrf24_module.is_packet(NULL)) {
-            if (nrf24_module.read_packet(&payload, sizeof(payload)) != 0) {
-                received_readings->temperature = payload[0];
-                received_readings->humidity = payload[1];
-                received_readings->light_intensity = payload[2];
-                received_readings->air_pressure = payload[3];
-                received_readings->air_quality_index = payload[4];
+        if (nrf24_module.is_packet(NULL)) {            
+            if (nrf24_module.read_packet(message, sizeof(ambient_info_t)) != 0) {
                 return (int8_t)0;
             }
             return (int8_t)-1;
         }
         return (int8_t)-1;
     }
+}
+
+
+/**
+ * @brief Decrypt the received radio message and store the obtained sensor 
+ * readings in the appropriate structure.
+ * 
+ * @param received_readings pointer to the sensor readings structure where
+ * the decrypted readings will be stored.
+ * @param aes_ctx AES decryption engine context.
+ * @param aes_key decryption key needed to decrypt the message.
+ * @param aes_iv initialization vector with which the original message was
+ * encrypted.
+ * @param message encrypted message as received by the radio module.
+ */
+void decrypt_ambient_info_message(
+    ambient_info_t *received_readings,
+    struct AES_ctx aes_ctx,
+    const uint8_t aes_key[],
+    const uint8_t aes_iv[],
+    uint8_t message[]
+) {
+    float values_array[sizeof(ambient_info_t) / sizeof(float)];
+
+    AES_init_ctx_iv(&aes_ctx, aes_key, aes_iv);
+    AES_CTR_xcrypt_buffer(&aes_ctx, message, sizeof(ambient_info_t));
+
+    memcpy(values_array, message, sizeof(ambient_info_t));
+
+    received_readings->temperature = values_array[0];
+    received_readings->humidity = values_array[1];
+    received_readings->light_intensity = values_array[2];
+    received_readings->air_pressure = values_array[3];
+    received_readings->air_quality_index = values_array[4];
 }

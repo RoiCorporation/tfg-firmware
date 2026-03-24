@@ -56,6 +56,7 @@ target_link_libraries(wireless_station_firmware
     hardware_pio
     hardware_pwm
     nrf24_driver
+    tiny-aes
 )
 
 # Add the standard include files to the build
@@ -63,8 +64,10 @@ target_include_directories(wireless_station_firmware
     PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/include
     ${CMAKE_CURRENT_LIST_DIR}/pico-nrf24-driver-main/lib/nrf24l01/
+    ${CMAKE_CURRENT_LIST_DIR}/tiny-AES-c-master/
 )
 
 add_subdirectory(pico-nrf24-driver-main/lib)
+add_subdirectory(tiny-AES-c-master)
 
 pico_add_extra_outputs(wireless_station_firmware)

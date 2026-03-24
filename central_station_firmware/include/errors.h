@@ -6,6 +6,7 @@
 #define TEMP_HUMIDITY_READ_ERROR 0x20  // Couldn't read the temperature or humidity values.
 #define LIGHT_SENSOR_READ_ERROR 0x21  // Couldn't obtain the value read by the light sensor through I2C.
 #define DATA_TRANSMIT_ERROR 0x22  // Couldn't successfully transmit the ambient info through the radio module.
+#define DATA_RECEIVE_ERROR 0x23  // Couldn't successfully receive the ambient info through the radio module.
 
 
 #endif

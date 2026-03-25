@@ -3,14 +3,20 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
+#include "bme68x.h"
+#include "bme680_port.h"
 #include "nrf24_driver.h"
 #include "wireless_station_firmware.h"
 
+#include <stdio.h>
 
 /**
  * @brief Initialize the different board components, such as stdio, I2C and GPIO.
  */
 void initialize_board(
+    struct bme68x_dev* bme680_sensor,
+    struct bme68x_conf* bme680_conf,
+    struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
     uint8_t copi_pin,
     uint8_t cipo_pin,
@@ -21,6 +27,7 @@ void initialize_board(
 ) {
     stdio_init_all();
     initialize_i2c_bus();
+    initialize_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf);
     initialize_nrf24_module(
         nrf24_module, copi_pin, cipo_pin, sck_pin, cs_pin, ce_pin, spi_baudrate
     );
@@ -40,6 +47,46 @@ void initialize_i2c_bus() {
     gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(SDA_PIN);
     gpio_pull_up(SCL_PIN);
+}
+
+
+void initialize_bme680_sensor(
+    struct bme68x_dev* bme680_sensor,
+    struct bme68x_conf* bme680_conf,
+    struct bme68x_heatr_conf* bme680_heater_conf
+) {
+
+    uint32_t del_period;
+    uint32_t time_ms = 0;
+    uint8_t n_fields;
+
+    int8_t result;
+    result = bme68x_platform_init(bme680_sensor);
+    result = bme68x_init(bme680_sensor);
+    if (result != BME68X_OK) {
+        printf("AQUi falla 1\n");
+    }
+
+    // Set the sensor configuration and operation mode.
+    bme680_conf->filter = BME68X_FILTER_OFF;
+    bme680_conf->odr = BME68X_ODR_NONE;
+    bme680_conf->os_hum = BME68X_OS_16X;
+    bme680_conf->os_pres = BME68X_OS_1X;
+    bme680_conf->os_temp = BME68X_OS_2X;
+    result = bme68x_set_conf(bme680_conf, bme680_sensor);
+    if (result != BME68X_OK) {
+        printf("AQUi falla 2\n");
+    }
+
+    // Set the sensor heater configuration.
+    bme680_heater_conf->enable = BME68X_ENABLE;
+    bme680_heater_conf->heatr_temp = 300;
+    bme680_heater_conf->heatr_dur = 100;
+    result = bme68x_set_heatr_conf(BME68X_FORCED_MODE, bme680_heater_conf, bme680_sensor);
+    if (result != BME68X_OK) {
+        printf("AQUi falla 3\n");
+    }
+
 }
 
 
@@ -96,6 +143,36 @@ void initialize_nrf24_module(
     // Set to Standby-I Mode.
     nrf24_module->standby_mode();
 }
+
+
+
+int8_t read_bme680_sensor(
+    struct bme68x_dev bme680_sensor,
+    struct bme68x_conf bme680_conf,
+    struct bme68x_heatr_conf bme680_heater_conf,
+    ambient_info_t *reading
+) {
+    struct bme68x_data sensor_data_read;
+    uint32_t del_period;
+    uint32_t time_ms = 0;
+    uint8_t n_fields;
+    int8_t reading_result;
+
+    bme68x_set_op_mode(BME68X_FORCED_MODE, &bme680_sensor);
+    del_period = bme68x_get_meas_dur(BME68X_FORCED_MODE, &bme680_conf, &bme680_sensor) + (bme680_heater_conf.heatr_dur * 1000);
+    bme680_sensor.delay_us(del_period, bme680_sensor.intf_ptr);
+    reading_result = bme68x_get_data(BME68X_FORCED_MODE, &sensor_data_read, &n_fields, &bme680_sensor);
+
+    if (n_fields && reading_result == BME68X_OK) {
+        reading->temperature = sensor_data_read.temperature;
+        reading->humidity = sensor_data_read.humidity;
+        reading->air_pressure = sensor_data_read.pressure;
+        reading->air_quality_index = sensor_data_read.gas_resistance;
+        return (int8_t)0;
+    }
+    return (int8_t)-1;
+}
+
 
 
 /**

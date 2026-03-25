@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #ifndef TEST
-#include "nrf24_driver.h"
+#include "bme68x.h"
 #include "aes.h"
 #endif
 
@@ -61,6 +61,9 @@ static const uint8_t AES_256_IV[16] = {
 // Declarations for setup functions.
 #ifndef TEST
 void initialize_board(
+    struct bme68x_dev* bme680_sensor,
+    struct bme68x_conf* bme680_conf,
+    struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
     uint8_t copi_pin,
     uint8_t cipo_pin,
@@ -70,6 +73,11 @@ void initialize_board(
     uint32_t spi_baudrate
 );
 void initialize_i2c_bus();
+void initialize_bme680_sensor(
+    struct bme68x_dev* bme680_sensor,
+    struct bme68x_conf* bme680_conf,
+    struct bme68x_heatr_conf* bme680_heater_conf
+);
 void initialize_nrf24_module(
     nrf_client_t* nrf24_module,
     uint8_t copi_pin,
@@ -82,6 +90,12 @@ void initialize_nrf24_module(
 
 
 // Declarations for functions related to sensor readings.
+int8_t read_bme680_sensor(
+    struct bme68x_dev bme680_sensor,
+    struct bme68x_conf bme680_conf,
+    struct bme68x_heatr_conf bme680_heater_conf,
+    ambient_info_t *reading
+);
 int8_t read_temperature_and_humidity(ambient_info_t *reading);
 int8_t read_light_intensity(ambient_info_t *reading);
 int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]);

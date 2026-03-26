@@ -3,15 +3,29 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
-#include "nrf24_driver.h"
-#include "aes.h"
+#include "bme680_port.h"
 #include "central_station_firmware.h"
 
 
 /**
- * @brief Initialize the different board components, such as stdio, I2C and GPIO.
+ * @brief Initialize the different station components, such as stdio, GPIO, I2C
+ * and the sensors.
+ * 
+ * @param bme680_sensor struct that acts as an instance of the sensor.
+ * @param bme680_conf struct for the sensor's configuration.
+ * @param bme680_heater_conf struct for the configuration of the sensor's heater.
+ * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param copi_pin SPI COPI microcontroller pin.
+ * @param cipo_pin CIPO microcontroller pin.
+ * @param sck_pin SPI SCK microcontroller pin.
+ * @param cs_pin SPI CS microcontroller pin.
+ * @param ce_pin SPI CE microcontroller pin.
+ * @param spi_baudrate SPI baudrate (in Herz).
  */
-void initialize_board(
+void initialize_station(
+    struct bme68x_dev* bme680_sensor,
+    struct bme68x_conf* bme680_conf,
+    struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
     uint8_t copi_pin,
     uint8_t cipo_pin,
@@ -22,6 +36,7 @@ void initialize_board(
 ) {
     stdio_init_all();
     initialize_i2c_bus();
+    initialize_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf);
     initialize_nrf24_module(
         nrf24_module, copi_pin, cipo_pin, sck_pin, cs_pin, ce_pin, spi_baudrate
     );
@@ -45,9 +60,45 @@ void initialize_i2c_bus() {
 
 
 /**
- * @brief Configure the nrf24l01 module.
+ * @brief Configure the BME680 sensor.
  * 
- * @param nrf24_module pointer to the nrf24l01 module driver.
+ * @param bme680_sensor struct that acts as an instance of the sensor.
+ * @param bme680_conf struct for the sensor's configuration.
+ * @param bme680_heater_conf struct for the configuration of the sensor's heater.
+ */
+void initialize_bme680_sensor(
+    struct bme68x_dev* bme680_sensor,
+    struct bme68x_conf* bme680_conf,
+    struct bme68x_heatr_conf* bme680_heater_conf
+) {
+
+    uint32_t del_period;
+    uint32_t time_ms = 0;
+    uint8_t n_fields;
+
+    bme68x_platform_init(bme680_sensor);
+    bme68x_init(bme680_sensor);
+
+    // Set the sensor configuration and operation mode.
+    bme680_conf->filter = BME68X_FILTER_OFF;
+    bme680_conf->odr = BME68X_ODR_NONE;
+    bme680_conf->os_hum = BME68X_OS_16X;
+    bme680_conf->os_pres = BME68X_OS_1X;
+    bme680_conf->os_temp = BME68X_OS_2X;
+    bme68x_set_conf(bme680_conf, bme680_sensor);
+
+    // Set the sensor heater configuration.
+    bme680_heater_conf->enable = BME68X_ENABLE;
+    bme680_heater_conf->heatr_temp = 300;
+    bme680_heater_conf->heatr_dur = 100;
+    bme68x_set_heatr_conf(BME68X_FORCED_MODE, bme680_heater_conf, bme680_sensor);
+}
+
+
+/**
+ * @brief Configure the NRF24L01 module.
+ * 
+ * @param nrf24_module pointer to the NRF24L01 module driver.
  * @param copi_pin SPI COPI microcontroller pin.
  * @param cipo_pin SPI CIPO microcontroller pin.
  * @param sck_pin SPI SCK microcontroller pin.
@@ -100,6 +151,45 @@ void initialize_nrf24_module(
 
     // Set to module RX Mode.
     nrf24_module->receiver_mode();
+}
+
+
+/**
+ * @brief Read temperature, humidity, air pressure and the Air Quality Index
+ * (AQI) from the BME680 sensor.
+ * 
+ * @param bme680_sensor struct that acts as an instance of the sensor. 
+ * @param bme680_conf struct for the sensor's configuration.
+ * @param bme680_heater_conf struct for the configuration of the sensor's heater.
+ * @param reading pointer to an ambient_info_t struct where the read values will
+ * be stored.
+ * @return int8_t 0 if the reading was successful, else -1.
+ */
+int8_t read_bme680_sensor(
+    struct bme68x_dev bme680_sensor,
+    struct bme68x_conf bme680_conf,
+    struct bme68x_heatr_conf bme680_heater_conf,
+    ambient_info_t *reading
+) {
+    struct bme68x_data sensor_data_read;
+    uint32_t del_period;
+    uint32_t time_ms = 0;
+    uint8_t n_fields;
+    int8_t reading_result;
+
+    bme68x_set_op_mode(BME68X_FORCED_MODE, &bme680_sensor);
+    del_period = bme68x_get_meas_dur(BME68X_FORCED_MODE, &bme680_conf, &bme680_sensor) + (bme680_heater_conf.heatr_dur * 1000);
+    bme680_sensor.delay_us(del_period, bme680_sensor.intf_ptr);
+    reading_result = bme68x_get_data(BME68X_FORCED_MODE, &sensor_data_read, &n_fields, &bme680_sensor);
+
+    if (n_fields && reading_result == BME68X_OK) {
+        reading->temperature = sensor_data_read.temperature;
+        reading->humidity = sensor_data_read.humidity;
+        reading->air_pressure = sensor_data_read.pressure;
+        reading->air_quality_index = sensor_data_read.gas_resistance;
+        return (int8_t)0;
+    }
+    return (int8_t)-1;
 }
 
 
@@ -162,7 +252,7 @@ int8_t read_temperature_and_humidity(ambient_info_t *reading) {
 
 
 /**
- * @brief Read light intensity from the light sensor.
+ * @brief Read light intensity from the BH1750 sensor.
  * 
  * @param reading pointer to an ambient_info_t struct where the read values 
  * will be stored.

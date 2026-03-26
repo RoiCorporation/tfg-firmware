@@ -3,16 +3,26 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
-#include "bme68x.h"
 #include "bme680_port.h"
-#include "nrf24_driver.h"
 #include "wireless_station_firmware.h"
 
 
 /**
- * @brief Initialize the different board components, such as stdio, I2C and GPIO.
+ * @brief Initialize the different station components, such as stdio, GPIO, I2C
+ * and the sensors.
+ * 
+ * @param bme680_sensor struct that acts as an instance of the sensor.
+ * @param bme680_conf struct for the sensor's configuration.
+ * @param bme680_heater_conf struct for the configuration of the sensor's heater.
+ * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param copi_pin SPI COPI microcontroller pin.
+ * @param cipo_pin CIPO microcontroller pin.
+ * @param sck_pin SPI SCK microcontroller pin.
+ * @param cs_pin SPI CS microcontroller pin.
+ * @param ce_pin SPI CE microcontroller pin.
+ * @param spi_baudrate SPI baudrate (in Herz).
  */
-void initialize_board(
+void initialize_station(
     struct bme68x_dev* bme680_sensor,
     struct bme68x_conf* bme680_conf,
     struct bme68x_heatr_conf* bme680_heater_conf,

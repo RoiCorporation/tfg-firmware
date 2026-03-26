@@ -1,11 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
-#include "bme68x.h"
-#include "nrf24_driver.h"
-#include "aes.h"
 #include "wireless_station_firmware.h"
 #include "hazards.h"
 #include "alerts.h"
@@ -37,7 +33,7 @@ int main() {
     uint8_t radio_message[sizeof(ambient_info_t)];
 
     // Configure all the protocols, devices and pins in the station.
-    initialize_board(
+    initialize_station(
         &bme680_sensor,
         &bme680_conf,
         &bme680_heater_conf,

@@ -61,7 +61,7 @@ static const uint8_t AES_256_IV[16] = {
 /* FUNCTION DECLARATIONS */
 // Declarations for setup functions.
 #ifndef TEST
-void initialize_board(
+void initialize_station(
     struct bme68x_dev* bme680_sensor,
     struct bme68x_conf* bme680_conf,
     struct bme68x_heatr_conf* bme680_heater_conf,

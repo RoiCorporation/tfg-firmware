@@ -8,7 +8,6 @@
 #include "nrf24_driver.h"
 #include "wireless_station_firmware.h"
 
-#include <stdio.h>
 
 /**
  * @brief Initialize the different board components, such as stdio, I2C and GPIO.
@@ -50,6 +49,13 @@ void initialize_i2c_bus() {
 }
 
 
+/**
+ * @brief Configure the BME680 sensor.
+ * 
+ * @param bme680_sensor struct that acts as an instance of the sensor.
+ * @param bme680_conf struct for the sensor's configuration.
+ * @param bme680_heater_conf struct for the configuration of the sensor's heater.
+ */
 void initialize_bme680_sensor(
     struct bme68x_dev* bme680_sensor,
     struct bme68x_conf* bme680_conf,
@@ -60,12 +66,8 @@ void initialize_bme680_sensor(
     uint32_t time_ms = 0;
     uint8_t n_fields;
 
-    int8_t result;
-    result = bme68x_platform_init(bme680_sensor);
-    result = bme68x_init(bme680_sensor);
-    if (result != BME68X_OK) {
-        printf("AQUi falla 1\n");
-    }
+    bme68x_platform_init(bme680_sensor);
+    bme68x_init(bme680_sensor);
 
     // Set the sensor configuration and operation mode.
     bme680_conf->filter = BME68X_FILTER_OFF;
@@ -73,25 +75,18 @@ void initialize_bme680_sensor(
     bme680_conf->os_hum = BME68X_OS_16X;
     bme680_conf->os_pres = BME68X_OS_1X;
     bme680_conf->os_temp = BME68X_OS_2X;
-    result = bme68x_set_conf(bme680_conf, bme680_sensor);
-    if (result != BME68X_OK) {
-        printf("AQUi falla 2\n");
-    }
+    bme68x_set_conf(bme680_conf, bme680_sensor);
 
     // Set the sensor heater configuration.
     bme680_heater_conf->enable = BME68X_ENABLE;
     bme680_heater_conf->heatr_temp = 300;
     bme680_heater_conf->heatr_dur = 100;
-    result = bme68x_set_heatr_conf(BME68X_FORCED_MODE, bme680_heater_conf, bme680_sensor);
-    if (result != BME68X_OK) {
-        printf("AQUi falla 3\n");
-    }
-
+    bme68x_set_heatr_conf(BME68X_FORCED_MODE, bme680_heater_conf, bme680_sensor);
 }
 
 
 /**
- * @brief Configure the nrf24l01 module.
+ * @brief Configure the NRF24L01 module.
  * 
  * @param nrf24_module pointer to the nrf24l01 module driver.
  * @param copi_pin SPI COPI microcontroller pin.
@@ -145,7 +140,17 @@ void initialize_nrf24_module(
 }
 
 
-
+/**
+ * @brief Read temperature, humidity, air pressure and the Air Quality Index
+ * (AQI) from the BME680 sensor.
+ * 
+ * @param bme680_sensor struct that acts as an instance of the sensor. 
+ * @param bme680_conf struct for the sensor's configuration.
+ * @param bme680_heater_conf struct for the configuration of the sensor's heater.
+ * @param reading pointer to an ambient_info_t struct where the read values will
+ * be stored.
+ * @return int8_t 0 if the reading was successful, else -1.
+ */
 int8_t read_bme680_sensor(
     struct bme68x_dev bme680_sensor,
     struct bme68x_conf bme680_conf,
@@ -174,12 +179,11 @@ int8_t read_bme680_sensor(
 }
 
 
-
 /**
  * @brief Read temperature and humidity from the DHT22 sensor.
  * 
- * @param reading pointer to an ambient_info_t struct where the read values 
- * will be stored.
+ * @param reading pointer to an ambient_info_t struct where the read values will
+ * be stored.
  * @return int8_t 0 if the reading was successful, else -1.
  */
 int8_t read_temperature_and_humidity(ambient_info_t *reading) {
@@ -234,7 +238,7 @@ int8_t read_temperature_and_humidity(ambient_info_t *reading) {
 
 
 /**
- * @brief Read light intensity from the light sensor.
+ * @brief Read light intensity from the BH1750 sensor.
  * 
  * @param reading pointer to an ambient_info_t struct where the read values 
  * will be stored.

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #ifndef TEST
 #include "bme68x.h"
+#include "nrf24_driver.h"
 #include "aes.h"
 #endif
 

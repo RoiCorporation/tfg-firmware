@@ -113,10 +113,7 @@ int main() {
         else {
             printf("Packet transmitted successfully.\n");
         }
-        printf("\n");
 
-
-        printf("\n");
         // Wait another full minute before reading sensors again.
         sleep_ms(1000); //sleep_ms(MINUTE_IN_MILLISECONDS)
     }

@@ -39,6 +39,7 @@ add_executable(central_station_firmware
     src/functions.c
     src/hazards.c
     src/alerts.c
+    src/bme680_port.c
 )
 
 pico_set_program_name(central_station_firmware "central_station_firmware")
@@ -55,14 +56,20 @@ target_link_libraries(central_station_firmware
     hardware_i2c
     hardware_pio
     hardware_pwm
+    BME68x_SensorAPI
     nrf24_driver
     tiny-aes
+)
+
+add_library(BME68x_SensorAPI STATIC
+    ${CMAKE_CURRENT_LIST_DIR}/BME68x_SensorAPI/bme68x.c
 )
 
 # Add the standard include files to the build
 target_include_directories(central_station_firmware 
     PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/include
+    ${CMAKE_CURRENT_LIST_DIR}/BME68x_SensorAPI/
     ${CMAKE_CURRENT_LIST_DIR}/pico-nrf24-driver-main/lib/nrf24l01/
     ${CMAKE_CURRENT_LIST_DIR}/tiny-AES-c-master/
 )

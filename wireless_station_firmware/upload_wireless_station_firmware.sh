@@ -3,23 +3,24 @@
 set -e  # Stop if any command fails.
 
 # Delete the build folder and create a new one.
-echo "🗑️ Removing the old build folder"
+echo "🗑️ Deleting existing build directory"
 rm -rf build
 
-echo "♻️ Recreating the build folder"
+# Create a clean build directory and switch into it.
+echo "📁 Creating and entering build directory"
 mkdir build
 cd build
 
-# Generate the build files to be used by Ninja.
-echo "🧱 Configuring CMake"
+# Configure the project and generate Ninja build files using CMake.
+echo "🧱 Generating Ninja build system with CMake"
 cmake -G Ninja ..
 
-# Run the Ninja build executer tool.
-echo "⛏️ Building the executable file"
+# Compile and link the project using Ninja.
+echo "⛏️ Compiling project with Ninja"
 ninja
 
-# Upload the .elf file to the board using picotool.
-echo "🚀 Uploading the program to the board"
+# Flash the ELF firmware to the Pico and start execution.
+echo "🚀 Flashing firmware to Pico and starting execution"
 picotool load "wireless_station_firmware.elf" -fx
 
-echo "✅ Upload complete!"
+echo "✅ Firmware successfully built and flashed"

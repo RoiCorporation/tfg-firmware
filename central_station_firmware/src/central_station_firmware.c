@@ -4,8 +4,10 @@
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
+#include "mongoose.h"
 #include "central_station_firmware.h"
 #include "errors.h"
+#include "network.h"
 
 
 int main() {
@@ -22,6 +24,23 @@ int main() {
     struct bme68x_dev bme680_sensor;
     struct bme68x_conf bme680_conf;
     struct bme68x_heatr_conf bme680_heater_conf;
+
+    struct mg_mgr mgr;
+    network_ctx_t net = {0};
+    net.mgr = &mgr;
+    net.environmental_readings = (ambient_info_t) {
+        .station_id = "41fab1f5-f5e7-4494-abdc-941dba10d683",
+        .temperature = NAN,
+        .humidity = NAN,
+        .light_intensity = NAN,
+        .air_pressure = NAN,
+        .air_quality_index = NAN,
+        .carbon_monoxide_concentration = NAN,
+        .methane_concentration = NAN,
+        .propane_concentration = NAN,
+        .alcohol_concentration = NAN,
+        .hydrogen_gas_concentration = NAN
+    };
 
     uint8_t radio_message[sizeof(ambient_info_t)];
 
@@ -40,13 +59,19 @@ int main() {
     );
 
     while (!stdio_usb_connected()) sleep_ms(10);
+
+    mg_mgr_init(&mgr);
+
+    // Maintain MQTT connection
+    mg_timer_add(&mgr, 3000, MG_TIMER_REPEAT, mqtt_timer_fn, &net);
+    mg_timer_add(&mgr, 5000, MG_TIMER_REPEAT, sensor_readings_timer, &net);
     
     while (1) {
-        wireless_station_info.temperature = NAN;
-        wireless_station_info.humidity = NAN;
-        wireless_station_info.light_intensity = NAN;
-        wireless_station_info.air_pressure = NAN;
-        wireless_station_info.air_quality_index = NAN;
+        net.environmental_readings.temperature = NAN;
+        net.environmental_readings.humidity = NAN;
+        net.environmental_readings.light_intensity = NAN;
+        net.environmental_readings.air_pressure = NAN;
+        net.environmental_readings.air_quality_index = NAN;
 
         if (receive_radio_message(nrf24_module, radio_message) == -1) {
             printf("Error when receiving the wireless station readings. Error number %d\n", 
@@ -54,18 +79,27 @@ int main() {
         }
         else {
             decrypt_ambient_info_message(
-                &wireless_station_info, aes_ctx, AES_256_KEY, 
+                &net.environmental_readings, aes_ctx, AES_256_KEY, 
                 AES_256_IV, radio_message
             );
 
-            printf("Temperature: %f\n", wireless_station_info.temperature);
-            printf("Humidity: %f\n", wireless_station_info.humidity);
-            printf("Light intensity: %f\n", wireless_station_info.light_intensity);
-            printf("Pressure: %f\n", wireless_station_info.air_pressure);
-            printf("Air quality index: %f\n", wireless_station_info.air_quality_index);
+            printf("Temperature: %f\n", net.environmental_readings.temperature);
+            printf("Humidity: %f\n", net.environmental_readings.humidity);
+            printf("Light intensity: %f\n", net.environmental_readings.light_intensity);
+            printf("Pressure: %f\n", net.environmental_readings.air_pressure);
+            printf("Air quality index: %f\n", net.environmental_readings.air_quality_index);
         }
         printf("\n");
+        mg_mgr_poll(&mgr, 1000);
 
         sleep_ms(1000);
     }
+
+    mg_mgr_free(&mgr);
+    return 0;
 }
+
+
+// // mosquitto_pub -d -q 1 -h mqtt.thingsboard.cloud -p 1883 -t v1/devices/me/telemetry -i "Centralstation0001" -u "Centralstation0001" -P "Centralstation0001" -m "{temperature:25}"
+// // To use mqtts, download the certificate here:
+// // curl -f -S -o tb-cloud-root-ca.pem https://thingsboard.cloud/api/device-connectivity/mqtts/certificate/download

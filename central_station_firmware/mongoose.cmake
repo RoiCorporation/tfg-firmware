@@ -3,10 +3,10 @@
 set(NAME mongoose)
 
 if (NOT DEFINED MONGOOSE_PATH)
-    set(MONGOOSE_PATH "${CMAKE_CURRENT_LIST_DIR}/mongoose")
+    set(MONGOOSE_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/mongoose/")
 endif()
 if (NOT DEFINED MONGOOSE_PORT)
-    set(MONGOOSE_PORT "${CMAKE_CURRENT_LIST_DIR}/port/mongoose")
+    set(MONGOOSE_PORT "${CMAKE_CURRENT_LIST_DIR}/lib/port/mongoose/")
 endif()
 
 message("Using MONGOOSE from ${MONGOOSE_PATH} with Port folder ${MONGOOSE_PORT}")

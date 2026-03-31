@@ -69,17 +69,17 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 add_library(BME68x_SensorAPI STATIC
-    ${CMAKE_CURRENT_LIST_DIR}/BME68x_SensorAPI/bme68x.c
+    ${CMAKE_CURRENT_LIST_DIR}/lib/BME68x_SensorAPI/bme68x.c
 )
 
 # Add the necessary include directories to the target.
 target_include_directories(${PROJECT_NAME} 
     PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/include/
-    ${CMAKE_CURRENT_LIST_DIR}/BME68x_SensorAPI/
-    ${CMAKE_CURRENT_LIST_DIR}/pico-nrf24-driver-main/lib/nrf24l01/
-    ${CMAKE_CURRENT_LIST_DIR}/tiny-AES-c-master/
-    ${CMAKE_CURRENT_LIST_DIR}/mongoose/
+    ${CMAKE_CURRENT_LIST_DIR}/lib/BME68x_SensorAPI/
+    ${CMAKE_CURRENT_LIST_DIR}/lib/pico-nrf24-driver/lib/nrf24l01/
+    ${CMAKE_CURRENT_LIST_DIR}/lib/tiny-AES-c/
+    ${CMAKE_CURRENT_LIST_DIR}/lib/mongoose/
 )
 
 # Get compile definitions from environmental variables 
@@ -98,14 +98,14 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 # Add subdirectories to the build
-add_subdirectory(pico-nrf24-driver-main/lib)
-add_subdirectory(tiny-AES-c-master)
+add_subdirectory(lib/pico-nrf24-driver/lib)
+add_subdirectory(lib/tiny-AES-c)
 
 pico_add_extra_outputs(${PROJECT_NAME})
 
 # ====================================================================================
 # Mongoose configuration
-SET(MONGOOSE_PATH "${CMAKE_CURRENT_LIST_DIR}/mongoose" CACHE STRING "Common Lib")
+SET(MONGOOSE_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/mongoose" CACHE STRING "Common Lib")
 include(mongoose.cmake)
 
 #Set up files for the release packages

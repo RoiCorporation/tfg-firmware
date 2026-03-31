@@ -57,3 +57,4 @@ dkms.conf
 # Miscellanea
 build
 .vscode/
+set_secrets.sh

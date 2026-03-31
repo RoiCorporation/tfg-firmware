@@ -5,10 +5,10 @@
 ## 🚀 Load firmware into the Pico 2 W
 The process to load a program into the Pico 2 W board is straightforward.
 
-1. Edit and run [this script](set_secrets.sh) in the current shell using 
+1. Edit and run [this script](set_secrets.example.sh) in the current shell using 
 the ```source``` command:
 ```
-source set_secrets.sh
+source set_secrets.example.sh
 ```
 This creates the environment variables that will be used by the board as 
 the credentials to connect to the WiFi network and establish the MQTT 

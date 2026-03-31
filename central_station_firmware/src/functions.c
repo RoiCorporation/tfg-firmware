@@ -15,6 +15,7 @@
  * @param bme680_conf struct for the sensor's configuration.
  * @param bme680_heater_conf struct for the configuration of the sensor's heater.
  * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param connection_manager pointer to the connection manager.
  * @param copi_pin SPI COPI microcontroller pin.
  * @param cipo_pin CIPO microcontroller pin.
  * @param sck_pin SPI SCK microcontroller pin.
@@ -27,6 +28,7 @@ void initialize_station(
     struct bme68x_conf* bme680_conf,
     struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
+    struct mg_mgr* connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -40,6 +42,7 @@ void initialize_station(
     initialize_nrf24_module(
         nrf24_module, copi_pin, cipo_pin, sck_pin, cs_pin, ce_pin, spi_baudrate
     );
+    mg_mgr_init(connection_manager);
     gpio_init(DHT22_PIN);
     gpio_set_function(BUZZER_PIN, GPIO_FUNC_PWM);
     unsigned int slice_num = pwm_gpio_to_slice_num(BUZZER_PIN);

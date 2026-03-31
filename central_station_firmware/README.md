@@ -1,10 +1,22 @@
 # Central Station Firmware
 
 
+
 ## 🚀 Load firmware into the Pico 2 W
-The process to load a program into the Pico 2 W board is straightforward,
-simply execute [this bash file](upload_central_station_firmware.sh)
-and the new version will be uploaded to the board.
+The process to load a program into the Pico 2 W board is straightforward.
+
+1. Edit and run [this script](set_secrets.example.sh) in the current shell using 
+the ```source``` command:
+```
+source set_secrets.example.sh
+```
+This creates the environment variables that will be used by the board as 
+the credentials to connect to the WiFi network and establish the MQTT 
+connection.
+
+2. From the same terminal, run [this bash file](upload_central_station_firmware.sh) 
+as usual to upload the firmware to the board.
+
 
 
 ## 🖥️ Check the data being transmitted over the USB cable
@@ -21,6 +33,7 @@ minicom -b 100000 -D /dev/cu.usbmodem1101
 ```
 , where the -b option indicates the baudrate and -D indicates
 the device from which to read.
+
 
 
 ## 🧪 Testing

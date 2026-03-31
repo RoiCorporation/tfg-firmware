@@ -6,6 +6,7 @@
 #include "bme68x.h"
 #include "nrf24_driver.h"
 #include "aes.h"
+#include "mongoose.h"
 #endif
 
 /* ALIASES */
@@ -13,11 +14,17 @@ typedef unsigned int pin_t;
 
 /* STRUCTS */
 typedef struct {
+    char station_id[37];
     float temperature;
     float humidity;
     float light_intensity;
     float air_pressure;
     float air_quality_index;
+    float carbon_monoxide_concentration;
+    float methane_concentration;
+    float propane_concentration;
+    float alcohol_concentration;
+    float hydrogen_gas_concentration;
 } ambient_info_t;
 
 /* CONSTANTS*/
@@ -66,6 +73,7 @@ void initialize_station(
     struct bme68x_conf* bme680_conf,
     struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
+    struct mg_mgr* connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,

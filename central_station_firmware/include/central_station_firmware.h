@@ -73,6 +73,7 @@ void initialize_station(
     struct bme68x_conf* bme680_conf,
     struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
+    struct mg_mgr* connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,

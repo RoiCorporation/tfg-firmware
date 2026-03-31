@@ -7,14 +7,13 @@
 
 
 typedef struct {
-    struct mg_mgr *mgr;
-    struct mg_connection *mqtt_conn;
+    struct mg_mgr *connection_manager;
+    struct mg_connection *mqtt_connection;
     ambient_info_t environmental_readings;
 } network_ctx_t;
 
 void wifi_setconfig(void *data);
 void mqtt_timer_fn(void *arg);
-void sensor_readings_timer(void *arg);
 void publish_environmental_readings(
     struct mg_connection *connection,
     ambient_info_t station_readings

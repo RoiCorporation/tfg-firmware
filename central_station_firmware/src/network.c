@@ -6,45 +6,69 @@
 static const char *s_url = "mqtt://mqtt.thingsboard.cloud:1883";
 
 
+/**
+ * @brief Configure the WiFi connection.
+ * 
+ * @param data struct containing the WiFi credentials.
+ */
 void wifi_setconfig(void *data) {
-    struct mg_tcpip_driver_pico_w_data *d =
+    struct mg_tcpip_driver_pico_w_data *wifi_data =
         (struct mg_tcpip_driver_pico_w_data *) data;
-    struct mg_wifi_data *wifi = &d->wifi;
+    struct mg_wifi_data *wifi = &wifi_data->wifi;
     wifi->ssid = WIFI_SSID;
     wifi->pass = WIFI_PASSWORD;
 }
 
-void mqtt_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
-    network_ctx_t *ctx = (network_ctx_t *) c->fn_data;
+
+/**
+ * @brief Configure the MQTT connection event handler.
+ * 
+ * @param connection struct that acts as the MQTT connection manager.
+ * @param ev code of the event.
+ * @param ev_data data created by that event.
+ */
+void mqtt_ev_handler(struct mg_connection *connection, int ev, void *ev_data) {
+    network_ctx_t *ctx = (network_ctx_t *) connection->fn_data;
 
     if (ev == MG_EV_OPEN) {
-        MG_INFO(("%lu CREATED", c->id));
+        MG_INFO(("%lu CREATED", connection->id));
 
-    } else if (ev == MG_EV_ERROR) {
-        MG_ERROR(("%lu ERROR %s", c->id, (char *) ev_data));
+    }
+    else if (ev == MG_EV_ERROR) {
+        MG_ERROR(("%lu ERROR %s", connection->id, (char *) ev_data));
 
-    } else if (ev == MG_EV_MQTT_OPEN) {
+    }
+    else if (ev == MG_EV_MQTT_OPEN) {
         int code = *(int *) ev_data;
 
         if (code == 0) {
             MG_INFO(("MQTT CONNECTED"));
-        } else {
+        }
+        else {
             MG_ERROR(("MQTT rejected, code=%d", code));
-            c->is_closing = 1;
+            connection->is_closing = 1;
         }
 
-    } else if (ev == MG_EV_CLOSE) {
+    }
+    else if (ev == MG_EV_CLOSE) {
         MG_INFO(("MQTT CLOSED"));
-        if (ctx && ctx->mqtt_conn == c) {
-            ctx->mqtt_conn = NULL;
+        if (ctx && ctx->mqtt_connection == connection) {
+            ctx->mqtt_connection = NULL;
         }
     }
 }
 
-void mqtt_timer_fn(void *arg) {
-    network_ctx_t *ctx = (network_ctx_t *) arg;
 
-    if (ctx->mqtt_conn == NULL) {
+/**
+ * @brief Configure the method that keeps the connection alive.
+ * 
+ * @param arg struct containing the necessary fields for the MQTT
+ * network.
+ */
+void mqtt_timer_fn(void *arg) {
+    network_ctx_t *network_context = (network_ctx_t *) arg;
+
+    if (network_context->mqtt_connection == NULL) {
         struct mg_mqtt_opts opts = {
             .clean = true,
             .version = 4,
@@ -53,21 +77,25 @@ void mqtt_timer_fn(void *arg) {
             .pass = mg_str(TB_PASSWORD)
         };
 
-        ctx->mqtt_conn =
-            mg_mqtt_connect(ctx->mgr, s_url, &opts, mqtt_ev_handler, ctx);
-    } else {
-        mg_mqtt_ping(ctx->mqtt_conn);
+        network_context->mqtt_connection = mg_mqtt_connect(
+            network_context->connection_manager, s_url, &opts, 
+            mqtt_ev_handler, network_context
+        );
+    }
+    else {
+        mg_mqtt_ping(network_context->mqtt_connection);
     }
 }
 
-void sensor_readings_timer(void *arg) {
-    network_ctx_t *ctx = (network_ctx_t *) arg;
-    if (ctx->mqtt_conn != NULL) {
-        publish_environmental_readings(ctx->mqtt_conn, ctx->environmental_readings);
-    }
-}
 
-// ---------- Publish ----------
+/**
+ * @brief Create an MQTT protocol "Publish" operation and send the environmental
+ * readings of a given station as the message's payload.
+ * 
+ * @param connection struct that acts as the MQTT connection manager.
+ * @param station_readings struct containing the environmental data read by the
+ * station.
+ */
 void publish_environmental_readings(
     struct mg_connection *connection,
     ambient_info_t station_readings

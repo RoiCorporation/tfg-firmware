@@ -131,7 +131,7 @@ int main(void)
       printf("\nPacket not sent:- Receiver not available.\n");
     }
 
-    sleep_ms(500);
+    sleep_ms(3000);
 
     // send to receiver's DATA_PIPE_1 address
     my_nrf.tx_destination((uint8_t[]){0xC7,0xC7,0xC7,0xC7,0xC7});
@@ -154,7 +154,7 @@ int main(void)
       printf("\nPacket not sent:- Receiver not available.\n");
     }
 
-    sleep_ms(500);
+    sleep_ms(3000);
 
     // send to receiver's DATA_PIPE_2 address
     my_nrf.tx_destination((uint8_t[]){0xC8,0xC7,0xC7,0xC7,0xC7});
@@ -177,7 +177,7 @@ int main(void)
       printf("\nPacket not sent:- Receiver not available.\n");
     }
 
-    sleep_ms(500);
+    sleep_ms(3000);
   }
   
 }

@@ -5,6 +5,9 @@
 #include "hardware/pwm.h"
 #include "bme680_port.h"
 #include "wireless_station_firmware.h"
+#include "utils.h"
+
+#include <stdio.h>
 
 
 /**
@@ -150,6 +153,22 @@ void initialize_nrf24_module(
 }
 
 
+void handshake(nrf_client_t nrf24_module) {
+    uint8_t station_id_in_bytes[STATION_ID_BYTES_LENGTH];
+
+    int station_id_bytes_length = hex_string_to_bytes(
+        STATION_ID, station_id_in_bytes, sizeof(station_id_in_bytes));
+    
+    if (station_id_bytes_length != STATION_ID_BYTES_LENGTH)
+        return;
+
+    nrf24_module.tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
+    if (nrf24_module.send_packet(station_id_in_bytes, sizeof(station_id_in_bytes)) != 0)
+        return;
+    else printf("Packet sent correctly\n");
+}
+
+
 /**
  * @brief Read temperature, humidity, air pressure and the Air Quality Index
  * (AQI) from the BME680 sensor.
@@ -283,7 +302,7 @@ int8_t read_light_intensity(ambient_info_t *reading) {
 int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
 
     // send to receiver's DATA_PIPE_1 address
-    nrf24_module.tx_destination((uint8_t[]){0xC7,0xC7,0xC7,0xC7,0xC7});
+    nrf24_module.tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
     if (nrf24_module.send_packet(message, sizeof(ambient_info_t)) != 0)
         return (int8_t)0;
 

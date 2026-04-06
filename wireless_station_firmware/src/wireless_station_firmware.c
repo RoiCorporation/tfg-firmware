@@ -51,8 +51,10 @@ int main() {
     // Initialize the BH1750.
     uint8_t cmd = BH1750_CONT_H_RES_MODE;
     i2c_write_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, &cmd, 1, false);
-    sleep_ms(180); // Wait for the first measurement (~120-180ms for high res).
+    sleep_ms(180); // Wait for the first measurement.
 
+    handshake(nrf24_module);
+    sleep_ms(15000);
 
     while (1) {
         sensor_readings.temperature = NAN;

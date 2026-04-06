@@ -12,23 +12,10 @@
 /* ALIASES */
 typedef unsigned int pin_t;
 
-/* STRUCTS */
-typedef struct {
-    char station_id[37];
-    float temperature;
-    float humidity;
-    float light_intensity;
-    float air_pressure;
-    float air_quality_index;
-    float carbon_monoxide_concentration;
-    float methane_concentration;
-    float propane_concentration;
-    float alcohol_concentration;
-    float hydrogen_gas_concentration;
-} ambient_info_t;
-
 /* CONSTANTS*/
 #define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
+#define STATION_ID_BYTES_LENGTH 16
+#define STATION_ID_CHAR_LENGTH 37
 #define DHT22_PIN 0
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
@@ -65,6 +52,21 @@ static const uint8_t AES_256_IV[16] = {
     0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff 
 };
 
+/* STRUCTS */
+typedef struct {
+    char station_id[STATION_ID_CHAR_LENGTH];
+    float temperature;
+    float humidity;
+    float light_intensity;
+    float air_pressure;
+    float air_quality_index;
+    float carbon_monoxide_concentration;
+    float methane_concentration;
+    float propane_concentration;
+    float alcohol_concentration;
+    float hydrogen_gas_concentration;
+} ambient_info_t;
+
 /* FUNCTION DECLARATIONS */
 // Declarations for setup functions.
 #ifndef TEST
@@ -96,6 +98,7 @@ void initialize_nrf24_module(
     uint8_t ce_pin,
     uint32_t spi_baudrate
 );
+void handshake(nrf_client_t nrf24_module, char wireless_station_id[]);
 
 // Declarations for functions related to sensor readings.
 int8_t read_bme680_sensor(

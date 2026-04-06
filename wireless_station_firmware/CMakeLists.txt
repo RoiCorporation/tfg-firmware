@@ -34,23 +34,24 @@ project(${PROJECT_NAME} C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Add executable. Default name is the project name, version 0.1
+# Add source files to the project.
 add_executable(${PROJECT_NAME} 
     src/wireless_station_firmware.c 
     src/functions.c 
     src/hazards.c
     src/alerts.c
     src/bme680_port.c
+    src/utils.c
 )
 
 pico_set_program_name(${PROJECT_NAME} "${PROJECT_NAME}")
 pico_set_program_version(${PROJECT_NAME} "0.1")
 
-# Modify the below lines to enable/disable output over UART/USB
+# Modify the below lines to enable/disable output over UART/USB.
 pico_enable_stdio_uart(${PROJECT_NAME} 0)
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
 
-# Add the standard library to the build
+# Add the necessary libraries to the target.
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
     pico_stdlib
@@ -66,7 +67,7 @@ add_library(BME68x_SensorAPI STATIC
     ${CMAKE_CURRENT_LIST_DIR}/lib/BME68x_SensorAPI/bme68x.c
 )
 
-# Add the standard include files to the build
+# Add the necessary include directories to the target.
 target_include_directories(${PROJECT_NAME} 
     PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/include
@@ -75,6 +76,13 @@ target_include_directories(${PROJECT_NAME}
     ${CMAKE_CURRENT_LIST_DIR}/lib/tiny-AES-c/
 )
 
+# Get compile definitions from environmental variables 
+# and add them to the target.
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    STATION_ID=\"$ENV{STATION_ID}\"
+)
+
+# Add subdirectories to the build
 add_subdirectory(lib/pico-nrf24-driver/lib)
 add_subdirectory(lib/tiny-AES-c)
 

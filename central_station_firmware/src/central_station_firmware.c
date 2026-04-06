@@ -30,7 +30,6 @@ int main() {
     network_ctx_t network_context = {0};
     network_context.connection_manager = &connection_manager;
     network_context.environmental_readings = (ambient_info_t) {
-        .station_id = "41fab1f5-f5e7-4494-abdc-941dba10d683",
         .temperature = NAN,
         .humidity = NAN,
         .light_intensity = NAN,
@@ -61,9 +60,9 @@ int main() {
     );
 
     while (!stdio_usb_connected()) sleep_ms(10);
-
     // Maintain MQTT connection
     mg_timer_add(&connection_manager, 3000, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
+    handshake(nrf24_module, network_context.environmental_readings.station_id);
     
     while (1) {
         network_context.environmental_readings.temperature = NAN;

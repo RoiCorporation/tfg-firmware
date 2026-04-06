@@ -5,6 +5,9 @@
 #include "hardware/pwm.h"
 #include "bme680_port.h"
 #include "central_station_firmware.h"
+#include "utils.h"
+
+#include <stdio.h>
 
 
 /**
@@ -150,10 +153,30 @@ void initialize_nrf24_module(
     // nrf24_module->dyn_payloads_enable();
 
     // Address to which the wireless stations will send their packets to.
-    nrf24_module->rx_destination(DATA_PIPE_1, (uint8_t[]){0xC7, 0xC7, 0xC7, 0xC7, 0xC7});
+    nrf24_module->rx_destination(DATA_PIPE_1, (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
 
     // Set to module RX Mode.
     nrf24_module->receiver_mode();
+}
+
+
+void handshake(nrf_client_t nrf24_module, char wireless_station_id[]) {
+    uint8_t wireless_station_id_bytes[STATION_ID_BYTES_LENGTH];
+    while (1) {
+        if (nrf24_module.is_packet(NULL)) {            
+            if (nrf24_module.read_packet(wireless_station_id_bytes, sizeof(wireless_station_id_bytes)) != 0)
+                break;
+        }
+        sleep_ms(200);
+    }
+
+    bytes_to_string_uuid(
+        wireless_station_id_bytes,
+        wireless_station_id,
+        STATION_ID_BYTES_LENGTH,
+        STATION_ID_CHAR_LENGTH
+    );
+    printf("UUID String: %s\n", wireless_station_id);
 }
 
 

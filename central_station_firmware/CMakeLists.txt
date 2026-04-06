@@ -42,6 +42,7 @@ add_executable(${PROJECT_NAME}
     src/alerts.c
     src/bme680_port.c
     src/network.c
+    src/utils.c
 )
 
 pico_set_program_name(${PROJECT_NAME} "${PROJECT_NAME}")
@@ -85,6 +86,7 @@ target_include_directories(${PROJECT_NAME}
 # Get compile definitions from environmental variables 
 # and add them to the target.
 target_compile_definitions(${PROJECT_NAME} PRIVATE
+    STATION_ID=\"$ENV{STATION_ID}\"
     WIFI_SSID=\"$ENV{WIFI_SSID}\"
     WIFI_PASSWORD=\"$ENV{WIFI_PASSWORD}\"
     CYW43_HOST_NAME="Pico2W-Web"

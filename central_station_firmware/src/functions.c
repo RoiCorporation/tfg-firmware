@@ -7,8 +7,6 @@
 #include "central_station_firmware.h"
 #include "utils.h"
 
-#include <stdio.h>
-
 
 /**
  * @brief Initialize the different station components, such as stdio, GPIO, I2C

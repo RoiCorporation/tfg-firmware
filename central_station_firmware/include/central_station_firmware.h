@@ -74,12 +74,14 @@ typedef struct {
     ambient_info_t environmental_readings;
 } network_ctx_t;
 
+#ifndef TEST
 typedef struct {
     struct bme68x_dev bme680_sensor;
     struct bme68x_conf bme680_conf;
     struct bme68x_heatr_conf bme680_heater_conf;
     network_ctx_t network_context;
 } queue_entry_t;
+#endif
 
 
 /* FUNCTION DECLARATIONS */

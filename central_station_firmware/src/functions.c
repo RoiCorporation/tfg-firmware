@@ -176,7 +176,6 @@ void handshake(nrf_client_t nrf24_module, char wireless_station_id[]) {
         STATION_ID_BYTES_LENGTH,
         STATION_ID_CHAR_LENGTH
     );
-    printf("UUID String: %s\n", wireless_station_id);
 }
 
 

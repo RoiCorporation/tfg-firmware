@@ -54,7 +54,6 @@ int main() {
     sleep_ms(180); // Wait for the first measurement.
 
     handshake(nrf24_module);
-    sleep_ms(15000);
 
     while (1) {
         sensor_readings.temperature = NAN;

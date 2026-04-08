@@ -67,6 +67,7 @@ target_link_libraries(${PROJECT_NAME}
     tiny-aes
     mongoose
     pico_mbedtls
+    pico_multicore
 )
 
 add_library(BME68x_SensorAPI STATIC

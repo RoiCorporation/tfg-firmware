@@ -163,9 +163,10 @@ void handshake(nrf_client_t nrf24_module) {
         return;
 
     nrf24_module.tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
-    if (nrf24_module.send_packet(station_id_in_bytes, sizeof(station_id_in_bytes)) != 0)
+    if (nrf24_module.send_packet(station_id_in_bytes, sizeof(station_id_in_bytes)) == ERROR) {
         return;
-    else printf("Packet sent correctly\n");
+    }
+    printf("Handshake end correctly\n");
 }
 
 

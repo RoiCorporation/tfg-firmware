@@ -67,6 +67,21 @@ typedef struct {
     float hydrogen_gas_concentration;
 } ambient_info_t;
 
+typedef struct {
+    struct mg_mgr *connection_manager;
+    struct mg_connection *mqtt_connection;
+    int8_t is_mqtt_connection_ready;
+    ambient_info_t environmental_readings;
+} network_ctx_t;
+
+typedef struct {
+    struct bme68x_dev bme680_sensor;
+    struct bme68x_conf bme680_conf;
+    struct bme68x_heatr_conf bme680_heater_conf;
+    network_ctx_t network_context;
+} queue_entry_t;
+
+
 /* FUNCTION DECLARATIONS */
 // Declarations for setup functions.
 #ifndef TEST

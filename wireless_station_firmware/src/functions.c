@@ -179,7 +179,7 @@ void handshake(nrf_client_t nrf24_module) {
  * @param bme680_heater_conf struct for the configuration of the sensor's heater.
  * @param reading pointer to an ambient_info_t struct where the read values will
  * be stored.
- * @return int8_t 0 if the reading was successful, else -1.
+ * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_bme680_sensor(
     struct bme68x_dev bme680_sensor,
@@ -214,7 +214,7 @@ int8_t read_bme680_sensor(
  * 
  * @param reading pointer to an ambient_info_t struct where the read values will
  * be stored.
- * @return int8_t 0 if the reading was successful, else -1.
+ * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_temperature_and_humidity(ambient_info_t *reading) {
     int data[5] = {0, 0, 0, 0, 0};
@@ -272,7 +272,7 @@ int8_t read_temperature_and_humidity(ambient_info_t *reading) {
  * 
  * @param reading pointer to an ambient_info_t struct where the read values 
  * will be stored.
- * @return int8_t 0 if the reading was successful, else -1.
+ * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_light_intensity(ambient_info_t *reading) {
     // Try to read 2 bytes.
@@ -298,7 +298,7 @@ int8_t read_light_intensity(ambient_info_t *reading) {
   * @param nrf24_module instance of the nrf24l01 driver with which the packet 
   * will be sent.
   * @param message array that contains the encrypted message to send.
-  * @return int8_t 0 if the radio message was sent successfully, else -1.
+  * @return int8_t 0 if the radio message was sent successfully, -1 otherwise.
   */
 int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
 

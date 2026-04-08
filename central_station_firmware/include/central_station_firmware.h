@@ -115,7 +115,7 @@ void initialize_nrf24_module(
     uint8_t ce_pin,
     uint32_t spi_baudrate
 );
-void handshake(nrf_client_t nrf24_module, char wireless_station_id[]);
+int8_t handshake(nrf_client_t nrf24_module, char wireless_station_id[]);
 
 // Declarations for functions related to sensor readings.
 int8_t read_bme680_sensor(

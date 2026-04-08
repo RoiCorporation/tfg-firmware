@@ -170,40 +170,48 @@ int main() {
         .network_context = network_context
     };
 
+    // Launch the other core to start reading values with the sensors 
+    // of this station and uploading them to the database.
     multicore_launch_core1(core1_entry);
     queue_add_blocking(&call_queue, &call_queue_entry);
 
-    // Maintain MQTT connection
-    handshake(nrf24_module, wireless_station_info.station_id);
+    // Check for incoming connections from wireless stations.
+    int8_t handshake_result = handshake(nrf24_module, wireless_station_info.station_id);
+    if (handshake_result == -1) {
+        printf("Error on the handshake when associating a wireless station. Error number %d\n",
+            HANDSHAKE_ERROR);
+    }
     
-    while (1) {
-        wireless_station_info.temperature = NAN;
-        wireless_station_info.humidity = NAN;
-        wireless_station_info.light_intensity = NAN;
-        wireless_station_info.air_pressure = NAN;
-        wireless_station_info.air_quality_index = NAN;
+    else {
+        while (1) {
+            wireless_station_info.temperature = NAN;
+            wireless_station_info.humidity = NAN;
+            wireless_station_info.light_intensity = NAN;
+            wireless_station_info.air_pressure = NAN;
+            wireless_station_info.air_quality_index = NAN;
 
-        if (receive_radio_message(nrf24_module, radio_message) == -1) {
-            printf("Error when receiving the wireless station readings. Error number %d\n", 
-                DATA_RECEIVE_ERROR);
-        }
-        else {
-            decrypt_ambient_info_message(
-                &wireless_station_info, aes_ctx, AES_256_KEY,
-                AES_256_IV, radio_message
-            );
-
-            if (mqtt_is_ready(&network_context) == 0) {
-                publish_environmental_readings(
-                    network_context.mqtt_connection,
-                    wireless_station_info
-                );
+            if (receive_radio_message(nrf24_module, radio_message) == -1) {
+                printf("Error when receiving the wireless station readings. Error number %d\n", 
+                    DATA_RECEIVE_ERROR);
             }
-        }
-        printf("\n");
+            else {
+                decrypt_ambient_info_message(
+                    &wireless_station_info, aes_ctx, AES_256_KEY,
+                    AES_256_IV, radio_message
+                );
 
-        mg_mgr_poll(&connection_manager, 1000);
-        sleep_ms(1000);
+                if (mqtt_is_ready(&network_context) == 0) {
+                    publish_environmental_readings(
+                        network_context.mqtt_connection,
+                        wireless_station_info
+                    );
+                }
+            }
+            printf("\n");
+
+            mg_mgr_poll(&connection_manager, 1000);
+            sleep_ms(1000);
+        }
     }
 
     mg_mgr_free(&connection_manager);

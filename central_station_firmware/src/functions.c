@@ -160,17 +160,28 @@ void initialize_nrf24_module(
 }
 
 
-void handshake(nrf_client_t nrf24_module, char wireless_station_id[]) {
+/**
+ * @brief Handles the handshake protocol necessary to establish a connection 
+ * between this station and a new wireless station.
+ * 
+ * @param nrf24_module struct representing the NRF24L01 module driver.
+ * @param wireless_station_id character array where the ID of the wireless
+ * station will be stored.
+ * @return int8_t 0 if the handshake was completed successfully, -1 otherwise.
+ */
+int8_t handshake(nrf_client_t nrf24_module, char wireless_station_id[]) {
     uint8_t wireless_station_id_bytes[STATION_ID_BYTES_LENGTH];
     while (1) {
         if (nrf24_module.is_packet(NULL)) {            
-            if (nrf24_module.read_packet(wireless_station_id_bytes, sizeof(wireless_station_id_bytes)) != 0)
+            if (nrf24_module.read_packet(
+                wireless_station_id_bytes, sizeof(wireless_station_id_bytes))
+                != ERROR)
                 break;
         }
         sleep_ms(200);
     }
 
-    bytes_to_string_uuid(
+    return bytes_to_string_uuid(
         wireless_station_id_bytes,
         wireless_station_id,
         STATION_ID_BYTES_LENGTH,
@@ -188,7 +199,7 @@ void handshake(nrf_client_t nrf24_module, char wireless_station_id[]) {
  * @param bme680_heater_conf struct for the configuration of the sensor's heater.
  * @param reading pointer to an ambient_info_t struct where the read values will
  * be stored.
- * @return int8_t 0 if the reading was successful, else -1.
+ * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_bme680_sensor(
     struct bme68x_dev bme680_sensor,
@@ -223,7 +234,7 @@ int8_t read_bme680_sensor(
  * 
  * @param reading pointer to an ambient_info_t struct where the read values 
  * will be stored.
- * @return int8_t 0 if the reading was successful, else -1.
+ * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_temperature_and_humidity(ambient_info_t *reading) {
     int data[5] = {0, 0, 0, 0, 0};
@@ -281,7 +292,7 @@ int8_t read_temperature_and_humidity(ambient_info_t *reading) {
  * 
  * @param reading pointer to an ambient_info_t struct where the read values 
  * will be stored.
- * @return int8_t 0 if the reading was successful, else -1.
+ * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_light_intensity(ambient_info_t *reading) {
     // Try to read 2 bytes.
@@ -307,7 +318,7 @@ int8_t read_light_intensity(ambient_info_t *reading) {
   * @param nrf24_module instance of the nrf24l01 driver with which the packet 
   * will be received.
   * @param message array where the received message is stored.
-  * @return int8_t 0 if the radio message was received successfully, else -1.
+  * @return int8_t 0 if the radio message was received successfully, -1 otherwise.
   */
 int8_t receive_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
     

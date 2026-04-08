@@ -73,7 +73,7 @@ void mqtt_ev_handler(struct mg_connection *connection, int ev, void *ev_data) {
  * 
  * @param network_context struct with all the information regarding the
  * actual connection.
- * @return int8_t 0 if the MQTT connection is ready, else -1.
+ * @return int8_t 0 if the MQTT connection is ready, -1 otherwise.
  */
 int8_t mqtt_is_ready(network_ctx_t *network_context) {
     int8_t is_mqtt_ready = -1;

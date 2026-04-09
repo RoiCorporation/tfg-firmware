@@ -1,7 +1,6 @@
-#include <stdint.h>
-#include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
-#include <stddef.h>
+#include "pico/rand.h"
 #include "utils.h"
 
 
@@ -22,6 +21,62 @@ int8_t hex_value(char c) {
         return (int8_t)(c - 'A' + 10);
 
     return (int8_t)-1;
+}
+
+
+/**
+ * @brief Initialize the buffer that maps each associated station ID with
+ * the particular address of each NRF24L01 module data pipe. Those addresses
+ * are generated randomly in this method, ensuring no two of them match.
+ * 
+ * @param station_id_to_nrf24_address_buffer structure that stores the mapping
+ * between the ID of each of the associated wireless stations and their respective
+ * receiving address in this central station's NRF24 module.
+ * @param buffer_size amount of data pipes of the module, should be 6.
+ * @param address_size length (in bytes) of the addresses, should be 5.
+ */
+void initialize_station_id_to_address_buffer(
+    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    size_t buffer_size,
+    size_t address_size
+) {
+    
+    // Position inside an address array of the Least Significant Byte (LSB).
+    uint8_t lsb_pos = address_size - 1;
+
+    // Initialize all the station ID slots available to NULL.
+    for (int i = 0; i < buffer_size; i++)
+        station_id_to_nrf24_address_buffer[i].associated_station_id = NULL;
+    
+    // Array of size 256 that marks which bytes have been selected randomly for
+    // the LSB of each address. It's used after generating all addresses to ensure
+    // that no two of them are equal and that all of their LSBs are different.
+    uint8_t lsbs_generated[256] = { 0x00 };
+
+    // Initialize all addresses.
+    for (int i = 0; i < buffer_size; i++) {
+
+        // Generate the full addresses for the first two data pipes (data pipes 0 and 1).
+        if (i < 2) {
+            for (int j = 0; j < address_size; j++)
+                station_id_to_nrf24_address_buffer[i].nrf24l01_address[j] = (uint8_t)get_rand_32();
+        }
+
+        // For the remaining data pipes, only generate the LSB.
+        else {
+            station_id_to_nrf24_address_buffer[i].nrf24l01_address[lsb_pos] = (uint8_t)get_rand_32();
+        }
+
+        // If the LSB of the current address isn't equal to another address' LSB,
+        // mark it as assigned in the marks array. In any other case, repeat this
+        // iteration to generate a new full address or LSB, depending on which
+        // data pipe the address is for.
+        uint8_t lsb_value_before = lsbs_generated[station_id_to_nrf24_address_buffer[i].nrf24l01_address[lsb_pos]];
+        if (lsb_value_before != 0)
+            i--;
+        else
+            lsbs_generated[station_id_to_nrf24_address_buffer[i].nrf24l01_address[lsb_pos]] = 1;
+    }
 }
 
 

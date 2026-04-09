@@ -137,6 +137,7 @@ int main() {
     memcpy(network_context.environmental_readings.station_id, STATION_ID, STATION_ID_CHAR_LENGTH);
     network_context.environmental_readings.station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
 
+    station_id_address_map_t station_id_to_nrf24_address_buffer[NRF24_ADDRESSES_BUFFER_SIZE];
     uint8_t radio_message[sizeof(ambient_info_t)];
 
     // Configure all the protocols, devices and pins in the station.
@@ -145,6 +146,7 @@ int main() {
         &bme680_conf,
         &bme680_heater_conf,
         &nrf24_module,
+        station_id_to_nrf24_address_buffer,
         network_context.connection_manager,
         COPI_PIN,
         CIPO_PIN,
@@ -154,7 +156,14 @@ int main() {
         SPI_BAUDRATE
     );
 
-    while (!stdio_usb_connected()) sleep_ms(10);
+    for (int i = 0; i < NRF24_ADDRESSES_BUFFER_SIZE; i++) {
+        printf("%d-th address: ", i);
+        for (int j = 0; j < NRF24_ADDRESS_SIZE; j++) {
+            printf("%x, ", station_id_to_nrf24_address_buffer[i].nrf24l01_address[j]);
+        }
+        printf("\n");
+    }
+
     mg_timer_add(&connection_manager, 3000, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
 
     while (mqtt_is_ready(&network_context) != 0) {

@@ -29,6 +29,7 @@ void initialize_station(
     struct bme68x_conf* bme680_conf,
     struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
+    station_id_address_map_t station_id_to_nrf24_address_buffer[],
     struct mg_mgr* connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
@@ -38,8 +39,14 @@ void initialize_station(
     uint32_t spi_baudrate
 ) {
     stdio_init_all();
+    while (!stdio_usb_connected()) sleep_ms(10);
     initialize_i2c_bus();
     initialize_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf);
+    initialize_station_id_to_address_buffer(
+        station_id_to_nrf24_address_buffer,
+        NRF24_ADDRESSES_BUFFER_SIZE,
+        NRF24_ADDRESS_SIZE
+    );
     initialize_nrf24_module(
         nrf24_module, copi_pin, cipo_pin, sck_pin, cs_pin, ce_pin, spi_baudrate
     );

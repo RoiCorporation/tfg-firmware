@@ -16,6 +16,8 @@ typedef unsigned int pin_t;
 #define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
 #define STATION_ID_BYTES_LENGTH 16
 #define STATION_ID_CHAR_LENGTH 37
+#define NRF24_ADDRESS_SIZE 5
+#define NRF24_ADDRESSES_BUFFER_SIZE 6
 #define DHT22_PIN 0
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
@@ -74,6 +76,11 @@ typedef struct {
     ambient_info_t environmental_readings;
 } network_ctx_t;
 
+typedef struct {
+    uint8_t nrf24l01_address[NRF24_ADDRESS_SIZE];
+    char *associated_station_id;
+} station_id_address_map_t;
+
 #ifndef TEST
 typedef struct {
     struct bme68x_dev bme680_sensor;
@@ -92,6 +99,7 @@ void initialize_station(
     struct bme68x_conf* bme680_conf,
     struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
+    station_id_address_map_t station_id_to_nrf24_address_buffer[],
     struct mg_mgr* connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,

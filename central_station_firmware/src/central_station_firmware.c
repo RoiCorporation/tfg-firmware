@@ -192,7 +192,7 @@ int main() {
         station_id_to_nrf24_address_buffer,
         NRF24_ADDRESSES_BUFFER_SIZE
     );
-    if (handshake_result == -1) {
+    if (handshake_result != 0) {
         printf("Error on the handshake when associating a wireless station. Error number %d\n",
             HANDSHAKE_ERROR);
     }

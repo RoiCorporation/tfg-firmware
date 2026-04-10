@@ -7,8 +7,6 @@
 #include "central_station_firmware.h"
 #include "utils.h"
 
-#include <stdio.h>
-
 
 /**
  * @brief Initialize the different station components, such as stdio, GPIO, I2C
@@ -149,7 +147,7 @@ void initialize_nrf24_module(
     nrf_driver_create_client(nrf24_module);
     
     // Configure GPIO pins and SPI baudrate.
-    nrf24_module->configure(&nrf24_pins, 7000000);
+    nrf24_module->configure(&nrf24_pins, spi_baudrate);
     
     // Configure the specific parameters of the module.
     nrf_manager_t nrf24_config = {
@@ -171,9 +169,7 @@ void initialize_nrf24_module(
     // from wireless stations and initialize the remaining data pipe's addresses.
     nrf24_module->rx_destination(DATA_PIPE_0, (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
     for (data_pipe_t pipe = DATA_PIPE_1; pipe < ALL_DATA_PIPES; pipe++) {
-        if (nrf24_module->rx_destination(pipe, station_id_to_nrf24_address_buffer[pipe].nrf24l01_address) == ERROR) {
-            printf("ERror setting up the pipes\n");
-        }
+        nrf24_module->rx_destination(pipe, station_id_to_nrf24_address_buffer[pipe].nrf24l01_address);
     }
 
     // Configure the transmit destination for when the station needs to send
@@ -186,12 +182,14 @@ void initialize_nrf24_module(
 
 
 /**
- * @brief Handles the handshake protocol necessary to establish a connection 
+ * @brief Handles the handshake protocol necessary to establish a connection
  * between this station and a new wireless station.
  * 
- * @param nrf24_module struct representing the NRF24L01 module driver.
- * @param wireless_station_id character array where the ID of the wireless
- * station will be stored.
+ * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param station_id_to_nrf24_address_buffer character array where the ID of the
+ * wireless station will be stored.
+ * @param buffer_size size of the buffer that maps each station ID with their
+ * corresponding nrf24 module address. 
  * @return int8_t 0 if the handshake was completed successfully, -1 otherwise.
  */
 int8_t handshake(
@@ -213,23 +211,20 @@ int8_t handshake(
             break;
         }
     }
-    printf("First available data pipe: %d\n", first_available_data_pipe);
     // The handshake will fail if there are no remaining data pipes available.
     if (first_available_data_pipe == ALL_DATA_PIPES)
         return (int8_t)-1;
 
     while (1) {
+        // If a packet is successfully read on the current available data pipe,
+        // store that packet as the wireless station id (still in bytes, not yet
+        // in string format). Then, configure that data pipe so that it only
+        // receives packets in that specific address.
         if (nrf24_module->is_packet(&data_pipe_read)) {
-            printf("Detected packet in pipe %d\n", data_pipe_read);
             if (data_pipe_read == first_available_data_pipe) {
                 if (nrf24_module->read_packet(
                     wireless_station_id_bytes, sizeof(wireless_station_id_bytes)) != ERROR) 
                 {
-                    printf("Received packet: ");
-                    for (int i = 0; i < sizeof(wireless_station_id_bytes); i++) {
-                        printf("%x, ", wireless_station_id_bytes[i]);
-                    }
-                    printf("\n");
                     if (first_available_data_pipe < DATA_PIPE_2)
                         nrf24_module->rx_destination(first_available_data_pipe, station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address);
                     else
@@ -248,6 +243,9 @@ int8_t handshake(
         sleep_ms(200);
     }
 
+    // Convert the received station ID from a byte array to a proper,
+    // UUID-formatted string ID and store it into the id_to_address
+    // buffer entry mapped to the aforementioned data pipe.
     int8_t result_uuid_to_string_conversion = bytes_to_string_uuid(
         wireless_station_id_bytes,
         &station_id_to_nrf24_address_buffer[first_available_data_pipe].associated_station_id,
@@ -274,51 +272,14 @@ int8_t handshake(
         station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address,
         NRF24_ADDRESS_SIZE
     );
-    printf("Packet being sent: ");
-    for (int i = 0; i < NRF24_ADDRESS_SIZE; i++) {
-        printf("%x, ", packet_to_send[i]);
-    }
-    printf("\n");
 
     // Send the packet.
-    if (nrf24_module->send_packet(packet_to_send, sizeof(packet_to_send)) == ERROR) {
-        printf("ERROR WHEN SENDING PACKET... but moving on\n");
-        // return (int8_t)-1;
-    }
+    nrf24_module->send_packet(packet_to_send, sizeof(packet_to_send));
 
     // Set to module RX Mode and wait for a while to ensure it's entered RX mode.
     nrf24_module->receiver_mode();
     sleep_ms(30);
-
-    uint8_t ex_pipe;
-    uint8_t example[6];
-    printf("Entering the loop...\n");
-    while (1) {
-        if (nrf24_module->is_packet(&ex_pipe)) {
-            printf("EXAMPLE packet in pipe %d\n", ex_pipe);
-            if (ex_pipe == first_available_data_pipe) {
-                printf("EXAMPLE Packet pipe matches expected pipe\n");
-                if (nrf24_module->read_packet(
-                    example, sizeof(example)) != ERROR)
-                {
-                    example[5] = '\0';
-                    printf("EXAMPLE Received: %s\n", example);
-                    break;
-                }
-                else {
-                    example[5] = '\0';
-                    printf("Apparently received failed, still received: %s\n", example);
-                }
-            }
-            else {
-                printf("Packet didn't match expected pipe\n");
-            }
-        }
-        sleep_ms(200);
-    }
-
-
-
+    
     return (int8_t)0;
 }
 

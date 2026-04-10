@@ -53,66 +53,72 @@ int main() {
     i2c_write_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, &cmd, 1, false);
     sleep_ms(180); // Wait for the first measurement.
 
-    handshake(&nrf24_module);
+    if (handshake(&nrf24_module) != 0) {
+        printf("Error on the handshake when associating a wireless station. Error number %d\n",
+            HANDSHAKE_ERROR);
+    }
 
-    while (1) {
-        sensor_readings.temperature = NAN;
-        sensor_readings.humidity = NAN;
-        sensor_readings.light_intensity = NAN;
-        sensor_readings.air_pressure = NAN;
-        sensor_readings.air_quality_index = NAN;
+    else {
 
-        if (read_temperature_and_humidity(&sensor_readings) == -1) {
-            printf("Error when reading the temperature and humidity sensor. Error number %d\n",
-                BME680_READ_ERROR);
-        }
-        else {
-            printf("DHT22 readings: Temperature %.1fC, Humidity %.1f%%\n",
-                   sensor_readings.temperature, sensor_readings.humidity);
-        }
+        while (1) {
+            sensor_readings.temperature = NAN;
+            sensor_readings.humidity = NAN;
+            sensor_readings.light_intensity = NAN;
+            sensor_readings.air_pressure = NAN;
+            sensor_readings.air_quality_index = NAN;
 
-        if (read_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf, &sensor_readings) == -1) {
-            printf("Error when reading the BME680 sensor measurements. Error number %d\n",
-                BME680_READ_ERROR);
-        }
-        else {
-            printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, Gas resistance (ohm) %d\n", sensor_readings.temperature, 
-                sensor_readings.humidity, sensor_readings.air_pressure, 
-                sensor_readings.air_quality_index);
-        }
+            if (read_temperature_and_humidity(&sensor_readings) == -1) {
+                printf("Error when reading the temperature and humidity sensor. Error number %d\n",
+                    BME680_READ_ERROR);
+            }
+            else {
+                printf("DHT22 readings: Temperature %.1fC, Humidity %.1f%%\n",
+                    sensor_readings.temperature, sensor_readings.humidity);
+            }
 
-        if (read_light_intensity(&sensor_readings) == -1) {
-            printf("Error when reading the light intensity sensor. Error number %d\n",
-                LIGHT_SENSOR_READ_ERROR);
-        }
-        else {
-            printf("Light intensity: %.2f\n", sensor_readings.light_intensity);
-        }
+            if (read_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf, &sensor_readings) == -1) {
+                printf("Error when reading the BME680 sensor measurements. Error number %d\n",
+                    BME680_READ_ERROR);
+            }
+            else {
+                printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, Gas resistance (ohm) %d\n", sensor_readings.temperature, 
+                    sensor_readings.humidity, sensor_readings.air_pressure, 
+                    sensor_readings.air_quality_index);
+            }
 
-        for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
-            previous_readings[i] = previous_readings[i + 1];
-        }
-        previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY - 1] = sensor_readings;
+            if (read_light_intensity(&sensor_readings) == -1) {
+                printf("Error when reading the light intensity sensor. Error number %d\n",
+                    LIGHT_SENSOR_READ_ERROR);
+            }
+            else {
+                printf("Light intensity: %.2f\n", sensor_readings.light_intensity);
+            }
 
-        int hazard_code = analyze_hazards(previous_readings);
-        if (hazard_code != 0) {
-            printf("Potential hazard detected! Code: %d\n", hazard_code);
-            activate_hazard_alert(hazard_code);
-        }
+            for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
+                previous_readings[i] = previous_readings[i + 1];
+            }
+            previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY - 1] = sensor_readings;
 
-        encrypt_ambient_info_message(
-            sensor_readings, aes_ctx, AES_256_KEY, AES_256_IV, radio_message);
+            int hazard_code = analyze_hazards(previous_readings);
+            if (hazard_code != 0) {
+                printf("Potential hazard detected! Code: %d\n", hazard_code);
+                activate_hazard_alert(hazard_code);
+            }
 
-        if (transmit_radio_message(nrf24_module, radio_message) == -1) {
-            printf("Error when sending the sensor readings. Error number %d\n", 
-                DATA_TRANSMIT_ERROR);
-        }
-        else {
-            printf("Packet transmitted successfully.\n");
-        }
+            encrypt_ambient_info_message(
+                sensor_readings, aes_ctx, AES_256_KEY, AES_256_IV, radio_message);
 
-        // Wait another full minute before reading sensors again.
-        sleep_ms(1000); //sleep_ms(MINUTE_IN_MILLISECONDS)
+            if (transmit_radio_message(nrf24_module, radio_message) == -1) {
+                printf("Error when sending the sensor readings. Error number %d\n", 
+                    DATA_TRANSMIT_ERROR);
+            }
+            else {
+                printf("Packet transmitted successfully.\n");
+            }
+
+            // Wait another full minute before reading sensors again.
+            sleep_ms(1000); //sleep_ms(MINUTE_IN_MILLISECONDS)
+        }
     }
 
 }

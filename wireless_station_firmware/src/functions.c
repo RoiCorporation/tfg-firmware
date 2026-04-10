@@ -7,8 +7,6 @@
 #include "wireless_station_firmware.h"
 #include "utils.h"
 
-#include <stdio.h>
-
 
 /**
  * @brief Initialize the different station components, such as stdio, GPIO, I2C
@@ -131,7 +129,7 @@ void initialize_nrf24_module(
     nrf_driver_create_client(nrf24_module);
     
     // Configure GPIO pins and SPI baudrate.
-    nrf24_module->configure(&nrf24_pins, 7000000);
+    nrf24_module->configure(&nrf24_pins, spi_baudrate);
     
     // Configure the specific parameters of the module.
     nrf_manager_t nrf24_config = {
@@ -158,27 +156,33 @@ void initialize_nrf24_module(
 }
 
 
-void handshake(nrf_client_t *nrf24_module) {
+/**
+ * @brief Handles the handshake protocol necessary to connect this station to
+ * a central station.
+ * 
+ * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @return int8_t 0 if the handshake was completed successfully, -1 otherwise.
+ */
+int8_t handshake(nrf_client_t *nrf24_module) {
 
     // Variables used in the method.
     uint8_t station_id_in_bytes[STATION_ID_BYTES_LENGTH];
     uint8_t received_packet[NRF24_ADDRESS_SIZE];
 
+    // Convert the ID from string to an array of bytes.
     int station_id_bytes_length = hex_string_to_bytes(
         STATION_ID, station_id_in_bytes, sizeof(station_id_in_bytes));
     
-    if (station_id_bytes_length != STATION_ID_BYTES_LENGTH) {
-        printf("ERROR IN 1\n");
-        return;
-    }
+    if (station_id_bytes_length != STATION_ID_BYTES_LENGTH)
+        return (int8_t)-1;
 
-    if (nrf24_module->tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00}) == ERROR) {
-        printf("ERROR IN 1.5\n");
-    }
-    sleep_ms(50);
-    if (nrf24_module->send_packet(station_id_in_bytes, sizeof(station_id_in_bytes)) == ERROR) {
-        printf("ERROR IN 2... but following on\n");
-    }
+    // Set the TX address to be the default handshake address that all
+    // central stations listen to.
+    if (nrf24_module->tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00}) == ERROR)
+        return (int8_t)-1;
+
+    // Transmit this station's ID as an array of bytes.
+    nrf24_module->send_packet(station_id_in_bytes, sizeof(station_id_in_bytes));
 
     /* --------------------------------------------------------------------- */
     // Now the central station will send this station the new address to which
@@ -191,20 +195,10 @@ void handshake(nrf_client_t *nrf24_module) {
     // Read the packet.
     while (1) {
         if (nrf24_module->is_packet(NULL)) {
-            if (nrf24_module->read_packet(received_packet, sizeof(received_packet)) != ERROR) {
+            if (nrf24_module->read_packet(received_packet, sizeof(received_packet)) != ERROR)
                 break;
-            }
-            else {
-                printf("Error when receiving the new TX address\n");
-            }
         }
     }
-
-    printf("Received new TX address: ");
-    for (int i = 0; i < sizeof(received_packet); i++) {
-        printf("%x, ", received_packet[i]);
-    }
-    printf("\n");
 
     // Update the destination address with the new one sent by the central station.
     nrf24_module->tx_destination(received_packet);
@@ -214,13 +208,7 @@ void handshake(nrf_client_t *nrf24_module) {
     nrf24_module->standby_mode();
     sleep_ms(30);
 
-
-    uint8_t radio_packet[6] = "Hello";
-    if (nrf24_module->send_packet(radio_packet, sizeof(radio_packet)) == ERROR) {
-        printf("HELLO not sent correctly...\n");
-    }
-
-    printf("Handshake ended correctly\n");
+    return (int8_t)0;
 }
 
 

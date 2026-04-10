@@ -53,7 +53,7 @@ int main() {
     i2c_write_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, &cmd, 1, false);
     sleep_ms(180); // Wait for the first measurement.
 
-    handshake(nrf24_module);
+    handshake(&nrf24_module);
 
     while (1) {
         sensor_readings.temperature = NAN;

@@ -136,19 +136,22 @@ int8_t hex_string_to_bytes(const char *hex, uint8_t *out, size_t out_size) {
  * @brief Convert raw UUID bytes to canonical UUID string.
  *
  * @param id_in_bytes input byte array.
- * @param uuid_string output buffer.
+ * @param uuid_string pointer to the output buffer.
  * @param size_bytes number of input bytes, must be 16.
- * @param uuid_string_size size of output buffer, must be at least 37.
+ * @param uuid_string_size size of output buffer, must be 37.
  * @return int8_t 0 on success, -1 on error.
  */
 int8_t bytes_to_string_uuid(
     uint8_t id_in_bytes[],
-    char uuid_string[],
+    char *uuid_string[],
     size_t size_bytes,
     size_t uuid_string_size
 ) {
     static const char hex[] = "0123456789abcdef";
     size_t j = 0;
+
+    if (*uuid_string == NULL)
+        *uuid_string = malloc(uuid_string_size * sizeof(char));
 
     if (!id_in_bytes || !uuid_string)
         return (int8_t)-1;
@@ -160,13 +163,13 @@ int8_t bytes_to_string_uuid(
     for (size_t i = 0; i < size_bytes; i++) {
         // Insert dashes before bytes 4, 6, 8, 10
         if (i == 4 || i == 6 || i == 8 || i == 10) {
-            uuid_string[j++] = '-';
+            (*uuid_string)[j++] = '-';
         }
 
-        uuid_string[j++] = hex[(id_in_bytes[i] >> 4) & 0x0F];
-        uuid_string[j++] = hex[id_in_bytes[i] & 0x0F];
+        (*uuid_string)[j++] = hex[(id_in_bytes[i] >> 4) & 0x0F];
+        (*uuid_string)[j++] = hex[id_in_bytes[i] & 0x0F];
     }
 
-    uuid_string[j] = '\0';
+    (*uuid_string)[j] = '\0';
     return (int8_t)0;
 }

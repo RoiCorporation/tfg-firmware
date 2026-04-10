@@ -117,7 +117,7 @@ void initialize_nrf24_module(
     uint8_t cs_pin,
     uint8_t ce_pin,
     uint32_t spi_baudrate
-){
+) {
     
     pin_manager_t nrf24_pins = { 
         .copi = copi_pin,
@@ -148,25 +148,79 @@ void initialize_nrf24_module(
     // nrf24_module->initialise(NULL);
     // nrf24_module->dyn_payloads_enable();
 
-    // Set to Standby-I Mode.
+    // Set the first data pipe with its associated address to receive any packets
+    // the central station this wireless station is associated to sends it (e.g.
+    // during the handshake).
+    nrf24_module->rx_destination(DATA_PIPE_0, (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
+
+    // Set to standby-I mode.
     nrf24_module->standby_mode();
 }
 
 
-void handshake(nrf_client_t nrf24_module) {
+void handshake(nrf_client_t *nrf24_module) {
+
+    // Variables used in the method.
     uint8_t station_id_in_bytes[STATION_ID_BYTES_LENGTH];
+    uint8_t received_packet[NRF24_ADDRESS_SIZE];
 
     int station_id_bytes_length = hex_string_to_bytes(
         STATION_ID, station_id_in_bytes, sizeof(station_id_in_bytes));
     
-    if (station_id_bytes_length != STATION_ID_BYTES_LENGTH)
-        return;
-
-    nrf24_module.tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
-    if (nrf24_module.send_packet(station_id_in_bytes, sizeof(station_id_in_bytes)) == ERROR) {
+    if (station_id_bytes_length != STATION_ID_BYTES_LENGTH) {
+        printf("ERROR IN 1\n");
         return;
     }
-    printf("Handshake end correctly\n");
+
+    if (nrf24_module->tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00}) == ERROR) {
+        printf("ERROR IN 1.5\n");
+    }
+    sleep_ms(50);
+    if (nrf24_module->send_packet(station_id_in_bytes, sizeof(station_id_in_bytes)) == ERROR) {
+        printf("ERROR IN 2... but following on\n");
+    }
+
+    /* --------------------------------------------------------------------- */
+    // Now the central station will send this station the new address to which
+    // it must send its readings going forward.
+
+    // Set to module RX Mode and wait for a while to ensure it's entered RX mode.
+    nrf24_module->receiver_mode();
+    sleep_ms(30);
+
+    // Read the packet.
+    while (1) {
+        if (nrf24_module->is_packet(NULL)) {
+            if (nrf24_module->read_packet(received_packet, sizeof(received_packet)) != ERROR) {
+                break;
+            }
+            else {
+                printf("Error when receiving the new TX address\n");
+            }
+        }
+    }
+
+    printf("Received new TX address: ");
+    for (int i = 0; i < sizeof(received_packet); i++) {
+        printf("%x, ", received_packet[i]);
+    }
+    printf("\n");
+
+    // Update the destination address with the new one sent by the central station.
+    nrf24_module->tx_destination(received_packet);
+
+    // Set the nrf24 module to standby-I mode to prepare it to enter TX mode and
+    // wait for a while to ensure it's entered TX mode.
+    nrf24_module->standby_mode();
+    sleep_ms(30);
+
+
+    uint8_t radio_packet[6] = "Hello";
+    if (nrf24_module->send_packet(radio_packet, sizeof(radio_packet)) == ERROR) {
+        printf("HELLO not sent correctly...\n");
+    }
+
+    printf("Handshake ended correctly\n");
 }
 
 
@@ -301,12 +355,8 @@ int8_t read_light_intensity(ambient_info_t *reading) {
   * @return int8_t 0 if the radio message was sent successfully, -1 otherwise.
   */
 int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
-
-    // send to receiver's DATA_PIPE_1 address
-    nrf24_module.tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
-    if (nrf24_module.send_packet(message, sizeof(ambient_info_t)) != 0)
+    if (nrf24_module.send_packet(message, sizeof(ambient_info_t)) != ERROR)
         return (int8_t)0;
-
     return (int8_t)-1;
 }
 

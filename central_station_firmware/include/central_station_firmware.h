@@ -116,6 +116,7 @@ void initialize_bme680_sensor(
 );
 void initialize_nrf24_module(
     nrf_client_t* nrf24_module,
+    station_id_address_map_t station_id_to_nrf24_address_buffer[],
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -123,7 +124,11 @@ void initialize_nrf24_module(
     uint8_t ce_pin,
     uint32_t spi_baudrate
 );
-int8_t handshake(nrf_client_t nrf24_module, char wireless_station_id[]);
+int8_t handshake(
+    nrf_client_t *nrf24_module,
+    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    size_t buffer_size
+);
 
 // Declarations for functions related to sensor readings.
 int8_t read_bme680_sensor(
@@ -134,7 +139,11 @@ int8_t read_bme680_sensor(
 );
 int8_t read_temperature_and_humidity(ambient_info_t *reading);
 int8_t read_light_intensity(ambient_info_t *reading);
-int8_t receive_radio_message(nrf_client_t nrf24_module, uint8_t message[]);
+int8_t receive_radio_message(
+    nrf_client_t nrf24_module,
+    uint8_t message[],
+    uint8_t *incoming_packet_data_pipe
+);
 void decrypt_ambient_info_message(
     ambient_info_t *received_readings, 
     struct AES_ctx aes_ctx, 

@@ -111,7 +111,8 @@ int main() {
     // AES decryption engine context.
     struct AES_ctx aes_ctx;
     
-    ambient_info_t station_readings, wireless_station_info;
+    ambient_info_t station_readings, wireless_station_readings_buffer[NRF24_ADDRESSES_BUFFER_SIZE];
+    uint8_t incoming_packet_data_pipe;
 
     // BME680 sensor driver and its configuration and heater structures.
     struct bme68x_dev bme680_sensor;
@@ -138,6 +139,7 @@ int main() {
     network_context.environmental_readings.station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
 
     station_id_address_map_t station_id_to_nrf24_address_buffer[NRF24_ADDRESSES_BUFFER_SIZE];
+
     uint8_t radio_message[sizeof(ambient_info_t)];
 
     // Configure all the protocols, devices and pins in the station.
@@ -185,34 +187,58 @@ int main() {
     queue_add_blocking(&call_queue, &call_queue_entry);
 
     // Check for incoming connections from wireless stations.
-    int8_t handshake_result = handshake(nrf24_module, wireless_station_info.station_id);
+    int8_t handshake_result = handshake(
+        &nrf24_module,
+        station_id_to_nrf24_address_buffer,
+        NRF24_ADDRESSES_BUFFER_SIZE
+    );
     if (handshake_result == -1) {
         printf("Error on the handshake when associating a wireless station. Error number %d\n",
             HANDSHAKE_ERROR);
     }
     
     else {
-        while (1) {
-            wireless_station_info.temperature = NAN;
-            wireless_station_info.humidity = NAN;
-            wireless_station_info.light_intensity = NAN;
-            wireless_station_info.air_pressure = NAN;
-            wireless_station_info.air_quality_index = NAN;
 
-            if (receive_radio_message(nrf24_module, radio_message) == -1) {
-                printf("Error when receiving the wireless station readings. Error number %d\n", 
+        while (1) {
+
+            if (receive_radio_message(
+                nrf24_module,
+                radio_message,
+                &incoming_packet_data_pipe
+            ) == -1) {
+                printf("Error when receiving a wireless station readings. Error number %d\n", 
                     DATA_RECEIVE_ERROR);
             }
             else {
+                wireless_station_readings_buffer[incoming_packet_data_pipe].temperature = NAN;
+                wireless_station_readings_buffer[incoming_packet_data_pipe].humidity = NAN;
+                wireless_station_readings_buffer[incoming_packet_data_pipe].light_intensity = NAN;
+                wireless_station_readings_buffer[incoming_packet_data_pipe].air_pressure = NAN;
+                wireless_station_readings_buffer[incoming_packet_data_pipe].air_quality_index = NAN;
+
                 decrypt_ambient_info_message(
-                    &wireless_station_info, aes_ctx, AES_256_KEY,
-                    AES_256_IV, radio_message
+                    &(wireless_station_readings_buffer[incoming_packet_data_pipe]),
+                    aes_ctx, AES_256_KEY, AES_256_IV, radio_message
+                );
+
+                memcpy(
+                    wireless_station_readings_buffer[incoming_packet_data_pipe].station_id,
+                    station_id_to_nrf24_address_buffer[incoming_packet_data_pipe].associated_station_id,
+                    STATION_ID_CHAR_LENGTH
+                );
+                wireless_station_readings_buffer[
+                    incoming_packet_data_pipe].station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
+
+                printf("Temperature: %f; Humidity: %f; ID: %s\n",
+                    wireless_station_readings_buffer[incoming_packet_data_pipe].temperature,
+                    wireless_station_readings_buffer[incoming_packet_data_pipe].humidity,
+                    wireless_station_readings_buffer[incoming_packet_data_pipe].station_id
                 );
 
                 if (mqtt_is_ready(&network_context) == 0) {
                     publish_environmental_readings(
                         network_context.mqtt_connection,
-                        wireless_station_info
+                        wireless_station_readings_buffer[incoming_packet_data_pipe]
                     );
                 }
             }

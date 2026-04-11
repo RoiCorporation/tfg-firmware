@@ -30,32 +30,62 @@ void wifi_setconfig(void *data) {
 void mqtt_ev_handler(struct mg_connection *connection, int ev, void *ev_data) {
     network_ctx_t *ctx = (network_ctx_t *) connection->fn_data;
 
-    if (ev == MG_EV_OPEN) {
-        MG_INFO(("%lu CREATED", connection->id));
+    switch (ev) {
+        case MG_EV_OPEN:
+            if (ctx) ctx->is_mqtt_connection_ready = 0;
+            MG_INFO(("%lu CREATED", connection->id));
+            break;
 
-    }
-    else if (ev == MG_EV_ERROR) {
-        MG_ERROR(("%lu ERROR %s", connection->id, (char *) ev_data));
+        case MG_EV_ERROR:
+            if (ctx) ctx->is_mqtt_connection_ready = 0;
+            MG_ERROR(("%lu ERROR %s", connection->id, (char *) ev_data));
+            break;
 
-    }
-    else if (ev == MG_EV_MQTT_OPEN) {
-        int code = *(int *) ev_data;
-
-        if (code == 0) {
-            MG_INFO(("MQTT CONNECTED"));
+        case MG_EV_MQTT_OPEN: {
+            int code = *(int *) ev_data;
+            if (code == 0) {
+                if (ctx) ctx->is_mqtt_connection_ready = 1;
+                MG_INFO(("MQTT CONNECTED"));
+            }
+            else {
+                if (ctx) ctx->is_mqtt_connection_ready = 0;
+                MG_ERROR(("MQTT rejected, code=%d", code));
+                connection->is_closing = 1;
+            }
+            break;
         }
-        else {
-            MG_ERROR(("MQTT rejected, code=%d", code));
-            connection->is_closing = 1;
-        }
 
+        case MG_EV_CLOSE:
+            if (ctx) {
+                ctx->is_mqtt_connection_ready = 0;
+                if (ctx->mqtt_connection == connection) {
+                    ctx->mqtt_connection = NULL;
+                }
+            }
+            MG_INFO(("MQTT CLOSED"));
+            break;
     }
-    else if (ev == MG_EV_CLOSE) {
-        MG_INFO(("MQTT CLOSED"));
-        if (ctx && ctx->mqtt_connection == connection) {
-            ctx->mqtt_connection = NULL;
-        }
+}
+
+
+/**
+ * @brief Checks if the MQTT connection is ready.
+ * 
+ * @param network_context struct with all the information regarding the
+ * actual connection.
+ * @return int8_t 0 if the MQTT connection is ready, -1 otherwise.
+ */
+int8_t mqtt_is_ready(network_ctx_t *network_context) {
+    int8_t is_mqtt_ready = -1;
+    if (
+        network_context != NULL &&
+        network_context->mqtt_connection != NULL &&
+        network_context->is_mqtt_connection_ready
+    ) {
+        is_mqtt_ready = 0;
     }
+
+    return (int8_t)is_mqtt_ready;
 }
 
 

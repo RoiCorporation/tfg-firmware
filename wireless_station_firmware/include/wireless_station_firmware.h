@@ -8,8 +8,6 @@
 #include "aes.h"
 #endif
 
-/* ALIASES */
-typedef unsigned int pin_t;
 
 /* STRUCTS */
 typedef struct {
@@ -22,6 +20,8 @@ typedef struct {
 
 /* CONSTANTS*/
 #define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
+#define STATION_ID_BYTES_LENGTH 16
+#define NRF24_ADDRESS_SIZE 5
 #define DHT22_PIN 0
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
@@ -88,7 +88,7 @@ void initialize_nrf24_module(
     uint8_t ce_pin,
     uint32_t spi_baudrate
 );
-
+int8_t handshake(nrf_client_t *nrf24_module);
 
 // Declarations for functions related to sensor readings.
 int8_t read_bme680_sensor(

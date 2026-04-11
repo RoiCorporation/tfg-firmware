@@ -5,6 +5,7 @@
 #include "hardware/pwm.h"
 #include "bme680_port.h"
 #include "central_station_firmware.h"
+#include "utils.h"
 
 
 /**
@@ -28,6 +29,7 @@ void initialize_station(
     struct bme68x_conf* bme680_conf,
     struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
+    station_id_address_map_t station_id_to_nrf24_address_buffer[],
     struct mg_mgr* connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
@@ -37,10 +39,23 @@ void initialize_station(
     uint32_t spi_baudrate
 ) {
     stdio_init_all();
+    while (!stdio_usb_connected()) sleep_ms(10);
     initialize_i2c_bus();
     initialize_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf);
+    initialize_station_id_to_address_buffer(
+        station_id_to_nrf24_address_buffer,
+        NRF24_ADDRESSES_BUFFER_SIZE,
+        NRF24_ADDRESS_SIZE
+    );
     initialize_nrf24_module(
-        nrf24_module, copi_pin, cipo_pin, sck_pin, cs_pin, ce_pin, spi_baudrate
+        nrf24_module,
+        station_id_to_nrf24_address_buffer,
+        copi_pin,
+        cipo_pin,
+        sck_pin,
+        cs_pin,
+        ce_pin,
+        spi_baudrate
     );
     mg_mgr_init(connection_manager);
     gpio_init(DHT22_PIN);
@@ -111,13 +126,14 @@ void initialize_bme680_sensor(
  */
 void initialize_nrf24_module(
     nrf_client_t* nrf24_module,
+    station_id_address_map_t station_id_to_nrf24_address_buffer[],
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
     uint8_t cs_pin,
     uint8_t ce_pin,
     uint32_t spi_baudrate
-){
+) {
     
     pin_manager_t nrf24_pins = { 
         .copi = copi_pin,
@@ -127,11 +143,11 @@ void initialize_nrf24_module(
         .ce = ce_pin 
     };
     
-    // Initialize the nrf24l01 module.
+    // Declare and initialize the nrf24l01 module.
     nrf_driver_create_client(nrf24_module);
     
     // Configure GPIO pins and SPI baudrate.
-    nrf24_module->configure(&nrf24_pins, 7000000);
+    nrf24_module->configure(&nrf24_pins, spi_baudrate);
     
     // Configure the specific parameters of the module.
     nrf_manager_t nrf24_config = {
@@ -149,11 +165,122 @@ void initialize_nrf24_module(
     // nrf24_module->initialise(NULL);
     // nrf24_module->dyn_payloads_enable();
 
-    // Address to which the wireless stations will send their packets to.
-    nrf24_module->rx_destination(DATA_PIPE_1, (uint8_t[]){0xC7, 0xC7, 0xC7, 0xC7, 0xC7});
+    // Make the first data pipe available to receive incoming handshake requests
+    // from wireless stations and initialize the remaining data pipe's addresses.
+    nrf24_module->rx_destination(DATA_PIPE_0, (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
+    for (data_pipe_t pipe = DATA_PIPE_1; pipe < ALL_DATA_PIPES; pipe++) {
+        nrf24_module->rx_destination(pipe, station_id_to_nrf24_address_buffer[pipe].nrf24l01_address);
+    }
+
+    // Configure the transmit destination for when the station needs to send
+    // packets to a wireless station (e.g. during the handshake).
+    nrf24_module->tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
 
     // Set to module RX Mode.
     nrf24_module->receiver_mode();
+}
+
+
+/**
+ * @brief Handles the handshake protocol necessary to establish a connection
+ * between this station and a new wireless station.
+ * 
+ * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param station_id_to_nrf24_address_buffer character array where the ID of the
+ * wireless station will be stored.
+ * @param buffer_size size of the buffer that maps each station ID with their
+ * corresponding nrf24 module address. 
+ * @return int8_t 0 if the handshake was completed successfully, -1 otherwise.
+ */
+int8_t handshake(
+    nrf_client_t *nrf24_module,
+    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    size_t buffer_size
+) {
+
+    // Variables used in the method.
+    uint8_t data_pipe_read = 0;
+    data_pipe_t first_available_data_pipe = ALL_DATA_PIPES;
+    uint8_t wireless_station_id_bytes[STATION_ID_BYTES_LENGTH];
+    uint8_t packet_to_send[NRF24_ADDRESS_SIZE];
+    
+    // Search the first available data pipe.
+    for (int i = 0; i < buffer_size; i++) {
+        if (station_id_to_nrf24_address_buffer[i].associated_station_id == NULL) {
+            first_available_data_pipe = i;
+            break;
+        }
+    }
+    // The handshake will fail if there are no remaining data pipes available.
+    if (first_available_data_pipe == ALL_DATA_PIPES)
+        return (int8_t)-1;
+
+    while (1) {
+        // If a packet is successfully read on the current available data pipe,
+        // store that packet as the wireless station id (still in bytes, not yet
+        // in string format). Then, configure that data pipe so that it only
+        // receives packets in that specific address.
+        if (nrf24_module->is_packet(&data_pipe_read)) {
+            if (data_pipe_read == first_available_data_pipe) {
+                if (nrf24_module->read_packet(
+                    wireless_station_id_bytes, sizeof(wireless_station_id_bytes)) != ERROR) 
+                {
+                    if (first_available_data_pipe < DATA_PIPE_2)
+                        nrf24_module->rx_destination(first_available_data_pipe, station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address);
+                    else
+                        nrf24_module->rx_destination(first_available_data_pipe, &station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address[NRF24_ADDRESS_SIZE - 1]);
+                    data_pipe_t next_available_data_pipe = first_available_data_pipe + 1;
+                    if (next_available_data_pipe < ALL_DATA_PIPES) {
+                        if (next_available_data_pipe < 2)
+                            nrf24_module->rx_destination(next_available_data_pipe, (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
+                        else
+                            nrf24_module->rx_destination(next_available_data_pipe, (uint8_t[]){0x00});
+                    }
+                    break;
+                }
+            }
+        }
+        sleep_ms(200);
+    }
+
+    // Convert the received station ID from a byte array to a proper,
+    // UUID-formatted string ID and store it into the id_to_address
+    // buffer entry mapped to the aforementioned data pipe.
+    int8_t result_uuid_to_string_conversion = bytes_to_string_uuid(
+        wireless_station_id_bytes,
+        &station_id_to_nrf24_address_buffer[first_available_data_pipe].associated_station_id,
+        STATION_ID_BYTES_LENGTH,
+        STATION_ID_CHAR_LENGTH
+    );
+    
+    if (result_uuid_to_string_conversion != 0)
+        return result_uuid_to_string_conversion;
+
+    /* --------------------------------------------------------------------- */
+    // Now the central station has to transmit to the wireless station the new
+    // address to which it should send its readings going forward.
+
+    // Set the nrf24 module to standby-I mode to prepare it to enter TX mode and
+    // wait for a while to ensure it's entered TX mode.
+    nrf24_module->standby_mode();
+    sleep_ms(30);
+
+    // Copy the address of the corresponding data pipe to the packet array. 
+    // This is the payload of the packet that the nrf24 module will send.
+    memcpy(
+        packet_to_send,
+        station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address,
+        NRF24_ADDRESS_SIZE
+    );
+
+    // Send the packet.
+    nrf24_module->send_packet(packet_to_send, sizeof(packet_to_send));
+
+    // Set to module RX Mode and wait for a while to ensure it's entered RX mode.
+    nrf24_module->receiver_mode();
+    sleep_ms(30);
+    
+    return (int8_t)0;
 }
 
 
@@ -166,7 +293,7 @@ void initialize_nrf24_module(
  * @param bme680_heater_conf struct for the configuration of the sensor's heater.
  * @param reading pointer to an ambient_info_t struct where the read values will
  * be stored.
- * @return int8_t 0 if the reading was successful, else -1.
+ * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_bme680_sensor(
     struct bme68x_dev bme680_sensor,
@@ -201,7 +328,7 @@ int8_t read_bme680_sensor(
  * 
  * @param reading pointer to an ambient_info_t struct where the read values 
  * will be stored.
- * @return int8_t 0 if the reading was successful, else -1.
+ * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_temperature_and_humidity(ambient_info_t *reading) {
     int data[5] = {0, 0, 0, 0, 0};
@@ -259,7 +386,7 @@ int8_t read_temperature_and_humidity(ambient_info_t *reading) {
  * 
  * @param reading pointer to an ambient_info_t struct where the read values 
  * will be stored.
- * @return int8_t 0 if the reading was successful, else -1.
+ * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_light_intensity(ambient_info_t *reading) {
     // Try to read 2 bytes.
@@ -278,20 +405,27 @@ int8_t read_light_intensity(ambient_info_t *reading) {
 }
 
 
- /**
-  * @brief Receive and store an encrypted radio message that contains the 
-  * sensor readings of a linked wireless station.
-  * 
-  * @param nrf24_module instance of the nrf24l01 driver with which the packet 
-  * will be received.
-  * @param message array where the received message is stored.
-  * @return int8_t 0 if the radio message was received successfully, else -1.
-  */
-int8_t receive_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
-    
+/**
+ * @brief Receive and store an encrypted radio message that contains the
+ * sensor readings of an associated wireless station. Also saves the data
+ * pipe of the nrf24 module where the packet was received, to later identify
+ * which wireless station sent the readings.
+ * 
+ * @param nrf24_module instance of the nrf24l01 driver with which the packet
+ * will be received.
+ * @param message array where the received message is stored.
+ * @param incoming_packet_data_pipe pointer to an uint8_t that will be assigned
+ * with the data pipe number of the incoming packet.
+ * @return int8_t 0 if the radio message was received successfully, -1 otherwise.
+ */
+int8_t receive_radio_message(
+    nrf_client_t nrf24_module,
+    uint8_t message[],
+    uint8_t *incoming_packet_data_pipe
+) {
     while (1) {
-        if (nrf24_module.is_packet(NULL)) {            
-            if (nrf24_module.read_packet(message, sizeof(ambient_info_t)) != 0) {
+        if (nrf24_module.is_packet(incoming_packet_data_pipe)) {            
+            if (nrf24_module.read_packet(message, sizeof(ambient_info_t)) != ERROR) {
                 return (int8_t)0;
             }
             return (int8_t)-1;

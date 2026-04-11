@@ -8,8 +8,6 @@
 #include "aes.h"
 #endif
 
-/* ALIASES */
-typedef unsigned int pin_t;
 
 /* STRUCTS */
 typedef struct {

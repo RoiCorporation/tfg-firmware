@@ -31,10 +31,12 @@ void core1_entry() {
     ambient_info_t *station_readings = &call_queue_entry.network_context.environmental_readings;
 
     while (1) {
+
+        // Initialize the values inside the station readings struct.
         memcpy(station_readings->station_id, STATION_ID, STATION_ID_CHAR_LENGTH);
         station_readings->station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
-        station_readings->temperature = 55.2;
-        station_readings->humidity = 3.2;
+        station_readings->temperature = NAN;
+        station_readings->humidity = NAN;
         station_readings->light_intensity = NAN;
         station_readings->air_pressure = NAN;
         station_readings->air_quality_index = NAN;
@@ -44,48 +46,48 @@ void core1_entry() {
         station_readings->alcohol_concentration = NAN;
         station_readings->hydrogen_gas_concentration = NAN;
 
-        // if (read_temperature_and_humidity(&station_readings) == -1) {
+        // if (read_temperature_and_humidity(station_readings) == -1) {
         //     printf("Error when reading the temperature and humidity sensor. Error number %d\n",
         //         BME680_READ_ERROR);
         // }
         // else {
         //     printf("DHT22 readings: Temperature %.1fC, Humidity %.1f%%\n",
-        //            station_readings.temperature, station_readings.humidity);
+        //            station_readings->temperature, station_readings->humidity);
         // }
 
-        // if (read_bme680_sensor(
-        //     call_queue_entry.bme680_sensor,
-        //     call_queue_entry.bme680_conf,
-        //     call_queue_entry.bme680_heater_conf,
-        //     &station_readings) == -1
-        // ) {
-        //     printf("Error when reading the BME680 sensor measurements. Error number %d\n",
-        //         BME680_READ_ERROR);
-        // }
-        // else {
-        //     printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, Gas resistance (ohm) %d\n", station_readings.temperature, 
-        //         station_readings.humidity, station_readings.air_pressure, 
-        //         station_readings.air_quality_index);
-        // }
+        if (read_bme680_sensor(
+            call_queue_entry.bme680_sensor,
+            call_queue_entry.bme680_conf,
+            call_queue_entry.bme680_heater_conf,
+            station_readings) == -1
+        ) {
+            printf("Error when reading the BME680 sensor measurements. Error number %d\n",
+                BME680_READ_ERROR);
+        }
+        else {
+            printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, Gas resistance (ohm) %d\n", station_readings->temperature, 
+                station_readings->humidity, station_readings->air_pressure, 
+                station_readings->air_quality_index);
+        }
 
-        // if (read_light_intensity(&station_readings) == -1) {
+        // if (read_light_intensity(station_readings) == -1) {
         //     printf("Error when reading the light intensity sensor. Error number %d\n",
         //         LIGHT_SENSOR_READ_ERROR);
         // }
         // else {
-        //     printf("Light intensity: %.2f\n", station_readings.light_intensity);
+        //     printf("Light intensity: %.2f\n", station_readings->light_intensity);
         // }
 
-        // for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
-        //     previous_readings[i] = previous_readings[i + 1];
-        // }
-        // previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY - 1] = station_readings;
+        for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
+            previous_readings[i] = previous_readings[i + 1];
+        }
+        previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY - 1] = *station_readings;
 
-        // int hazard_code = analyze_hazards(previous_readings);
-        // if (hazard_code != 0) {
-        //     printf("Potential hazard detected! Code: %d\n", hazard_code);
-        //     activate_hazard_alert(hazard_code);
-        // }
+        int hazard_code = analyze_hazards(previous_readings);
+        if (hazard_code != 0) {
+            printf("Potential hazard detected! Code: %d\n", hazard_code);
+            activate_hazard_alert(hazard_code);
+        }
 
         if (mqtt_is_ready(&call_queue_entry.network_context) == 0) {
             publish_environmental_readings(

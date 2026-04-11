@@ -9,8 +9,6 @@
 #include "mongoose.h"
 #endif
 
-/* ALIASES */
-typedef unsigned int pin_t;
 
 /* CONSTANTS*/
 #define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)

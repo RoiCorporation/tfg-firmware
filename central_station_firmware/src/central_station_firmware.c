@@ -181,25 +181,21 @@ int main() {
     // ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
     // ssd1306_show(&oled_display);
     // sleep_ms(5000);
-    
-    display_light_intensity(&oled_display, 31238.2322);
-    sleep_ms(6000);
-    display_light_intensity(&oled_display, 9);
-    sleep_ms(6000);
-    display_light_intensity(&oled_display, 70.12);
-    sleep_ms(6000);
-    display_light_intensity(&oled_display, 500);
-    sleep_ms(6000);
-    display_light_intensity(&oled_display, 1500);
-    sleep_ms(6000);
-    display_light_intensity(&oled_display, 29307);
-    sleep_ms(6000);
-    // display_temperature(&oled_display, 3.1);
-    // sleep_ms(6000);
-    // display_temperature(&oled_display, 72.1);
-    // sleep_ms(6000);
-    // display_temperature(&oled_display, -6.1);
-    // sleep_ms(6000);
+
+    display_hydrogen_gas_concentration(&oled_display, 512);
+    sleep_ms(3000);
+    display_hydrogen_gas_concentration(&oled_display, 9177.123);
+    sleep_ms(3000);
+    display_hydrogen_gas_concentration(&oled_display, 8769);
+    sleep_ms(3000);
+    display_hydrogen_gas_concentration(&oled_display, 57252);
+    sleep_ms(3000);
+    display_hydrogen_gas_concentration(&oled_display, 10001.23);
+    sleep_ms(3000);
+    display_hydrogen_gas_concentration(&oled_display, 389);
+    sleep_ms(3000);
+    display_hydrogen_gas_concentration(&oled_display, 1333.528);
+    sleep_ms(3000);
 
     // mg_timer_add(&connection_manager, 3000, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
 

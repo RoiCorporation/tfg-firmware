@@ -46,10 +46,19 @@ else
         ./$BIN2C_PROGRAM_FOLDER/bin2c "$BMP_FOLDER/$icon_name.bmp" \
         "$ICONS_HEADER_FILES_FOLDER/$icon_name.h"
 
+        # Add include guards and endif to the current icon header file.
+        echo -e \
+"#ifndef $(echo "$icon_name" | tr '[:lower:]' '[:upper:]')_H\n\
+#define $(echo "$icon_name" | tr '[:lower:]' '[:upper:]')_H\n\n\n\
+$(cat $INCLUDE_FOLDER/${ICONS_HEADER_FILES_FOLDER#*/}/$icon_name.h)"\
+> $INCLUDE_FOLDER/${ICONS_HEADER_FILES_FOLDER#*/}/$icon_name.h
+
+        echo -e "\n\n#endif" >> $INCLUDE_FOLDER/${ICONS_HEADER_FILES_FOLDER#*/}/$icon_name.h
+
         # Include the generated icon header file in the icons.h file.
         echo -e "#include \"${ICONS_HEADER_FILES_FOLDER#*/}/$icon_name.h\"" >> \
         $ICONS_HEADER_FILE
-        
+
     done
 
     echo -e "\n\n#endif" >> $ICONS_HEADER_FILE

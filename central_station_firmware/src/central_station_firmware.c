@@ -187,17 +187,17 @@ int main() {
     sleep_ms(5000);
     
     ssd1306_clear(&oled_display);
-    ssd1306_bmp_show_image_with_offset(&oled_display, light_intensity_icon_bmp_data, light_intensity_icon_bmp_size, 15, 16);
+    ssd1306_bmp_show_image_with_offset(&oled_display, media_bmp_light_intensity_icon_bmp_data, media_bmp_light_intensity_icon_bmp_size, 15, 16);
     ssd1306_show(&oled_display);
     sleep_ms(5000);
 
     ssd1306_clear(&oled_display);
-    ssd1306_bmp_show_image_with_offset(&oled_display, humidity_icon_bmp_data, humidity_icon_bmp_size, 15, 16);
+    ssd1306_bmp_show_image_with_offset(&oled_display, media_bmp_humidity_icon_bmp_data, media_bmp_humidity_icon_bmp_size, 15, 16);
     ssd1306_show(&oled_display);
     sleep_ms(5000);
 
     ssd1306_clear(&oled_display);
-    ssd1306_bmp_show_image_with_offset(&oled_display, temperature_icon_bmp_data, temperature_icon_bmp_size, 15, 16);
+    ssd1306_bmp_show_image_with_offset(&oled_display, media_bmp_temperature_icon_bmp_data, media_bmp_temperature_icon_bmp_size, 15, 16);
     ssd1306_show(&oled_display);
     sleep_ms(5000);
 

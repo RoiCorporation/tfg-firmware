@@ -5,8 +5,8 @@
 ## 🚀 Load firmware into the Pico 2 W
 The process to load a program into the Pico 2 W board is straightforward.
 
-1. Edit and run [this script](set_secrets.example.sh) in the current shell using 
-the ```source``` command:
+1. Edit and run [this script](scripts/set_secrets.example.sh) in the current
+shell using the ```source``` command:
 ```
 source set_secrets.example.sh
 ```
@@ -14,7 +14,7 @@ This creates the environment variables that will be used by the board as
 the credentials to connect to the WiFi network and establish the MQTT 
 connection.
 
-2. From the same terminal, run [this bash file](upload_central_station_firmware.sh) 
+2. From the same terminal, run [this bash file](scripts/upload_central_station_firmware.sh)
 as usual to upload the firmware to the board.
 
 
@@ -37,15 +37,9 @@ the device from which to read.
 
 
 ## Generate icons for the OLED display
-1. From inside the lib/pico-ssd1306/tools directory, run
+1. From the firmware's root folder, run [this script](scripts/generate_icon_bytemap.sh)
 ```
-make
-magick ../../../media/png/temperature_icon.png -background white -alpha remove -alpha off -colors 2 -type bilevel BMP3:../../../media/bmp/temperature_icon.bmp
-```
-
-2. 
-```
-./bin2c ../../../media/bmp/temperature_icon.bmp ../../../include/icons_header_files/temperature_icon.h
+./scripts/generate_icon_bytemap.sh
 ```
 
 

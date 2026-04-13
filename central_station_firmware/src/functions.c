@@ -67,7 +67,7 @@ void initialize_station(
         ce_pin,
         spi_baudrate
     );
-    ssd1306_init(oled_display, 128, 64, 0x3c, i2c0);
+    ssd1306_init(oled_display, 128, 64, 0x23, i2c0);
     ssd1306_clear(oled_display);
     oled_display->external_vcc=false;
     mg_mgr_init(connection_manager);

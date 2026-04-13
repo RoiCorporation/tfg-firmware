@@ -36,6 +36,20 @@ the device from which to read.
 
 
 
+## Generate icons for the OLED display
+1. From inside the lib/pico-ssd1306/tools directory, run
+```
+make
+magick ../../../media/png/temperature_icon.png -background white -alpha remove -alpha off -colors 2 -type bilevel BMP3:../../../media/bmp/temperature_icon.bmp
+```
+
+2. 
+```
+./bin2c ../../../media/bmp/temperature_icon.bmp ../../../include/icons_header_files/temperature_icon.h
+```
+
+
+
 ## 🧪 Testing
 [Ceedling](https://github.com/throwtheswitch/ceedling) is used to
 run the test suite for this project. To install this tool, run:

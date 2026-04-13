@@ -4,6 +4,7 @@
 #include <stdint.h>
 #ifndef TEST
 #include "bme68x.h"
+#include "ssd1306.h"
 #include "nrf24_driver.h"
 #include "aes.h"
 #include "mongoose.h"
@@ -19,7 +20,7 @@
 #define DHT22_PIN 0
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
-#define I2C_BAUDRATE 100000
+#define I2C_BAUDRATE 400000
 #define LIGHT_SENSOR_I2C_ADDRESS 0x23
 #define BH1750_CONT_H_RES_MODE 0x10
 #define BOARD_ADC_RESOLUTION 4096
@@ -84,6 +85,7 @@ typedef struct {
     struct bme68x_dev bme680_sensor;
     struct bme68x_conf bme680_conf;
     struct bme68x_heatr_conf bme680_heater_conf;
+    ssd1306_t* oled_display;
     network_ctx_t network_context;
 } queue_entry_t;
 #endif
@@ -98,6 +100,7 @@ void initialize_station(
     struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
     station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    ssd1306_t* oled_display,
     struct mg_mgr* connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,

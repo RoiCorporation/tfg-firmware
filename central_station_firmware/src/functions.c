@@ -8,14 +8,22 @@
 #include "utils.h"
 
 
+#include <stdio.h>
+
+
 /**
  * @brief Initialize the different station components, such as stdio, GPIO, I2C
  * and the sensors.
  * 
- * @param bme680_sensor struct that acts as an instance of the sensor.
- * @param bme680_conf struct for the sensor's configuration.
- * @param bme680_heater_conf struct for the configuration of the sensor's heater.
+ * @param bme680_sensor pointer to the struct that acts as an instance of the 
+ * BME680 sensor.
+ * @param bme680_conf pointer to the struct for the BME680 sensor's configuration.
+ * @param bme680_heater_conf pointer to the struct for the configuration of the 
+ * BME680 sensor's heater.
  * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param station_id_to_nrf24_address_buffer buffer that maps the associated
+ * wireless stations ID's with the NRF24L01 module data pipe addresses.
+ * @param oled_display pointer to the OLED display driver.
  * @param connection_manager pointer to the connection manager.
  * @param copi_pin SPI COPI microcontroller pin.
  * @param cipo_pin CIPO microcontroller pin.
@@ -30,6 +38,7 @@ void initialize_station(
     struct bme68x_heatr_conf* bme680_heater_conf,
     nrf_client_t* nrf24_module,
     station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    ssd1306_t* oled_display,
     struct mg_mgr* connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
@@ -41,6 +50,7 @@ void initialize_station(
     stdio_init_all();
     while (!stdio_usb_connected()) sleep_ms(10);
     initialize_i2c_bus();
+    sleep_ms(100);
     initialize_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf);
     initialize_station_id_to_address_buffer(
         station_id_to_nrf24_address_buffer,
@@ -57,6 +67,9 @@ void initialize_station(
         ce_pin,
         spi_baudrate
     );
+    ssd1306_init(oled_display, 128, 64, 0x3c, i2c0);
+    ssd1306_clear(oled_display);
+    oled_display->external_vcc=false;
     mg_mgr_init(connection_manager);
     gpio_init(DHT22_PIN);
     gpio_set_function(BUZZER_PIN, GPIO_FUNC_PWM);

@@ -9,11 +9,11 @@
 #include "mongoose.h"
 #include "network.h"
 #include "ssd1306.h"
+#include "oled_display.h"
 #include "central_station_firmware.h"
 #include "hazards.h"
 #include "alerts.h"
 #include "errors.h"
-#include "icons.h"
 
 
 queue_t call_queue;
@@ -95,10 +95,6 @@ void core1_entry() {
         
         if (mqtt_is_ready(&call_queue_entry.network_context) == 0) {
             ssd1306_draw_string(call_queue_entry.oled_display, 0, 0, 1, "Station connected");
-            ssd1306_draw_string(call_queue_entry.oled_display, 3, 19, 2, "23.5");
-            ssd1306_draw_string(call_queue_entry.oled_display, 67, 19, 2, "23.5");
-            ssd1306_draw_string(call_queue_entry.oled_display, 3, 38, 2, "23.5");
-            ssd1306_draw_string(call_queue_entry.oled_display, 67, 38, 2, "23.5");
             ssd1306_show(call_queue_entry.oled_display);
             publish_environmental_readings(
                 call_queue_entry.network_context.mqtt_connection,
@@ -182,24 +178,28 @@ int main() {
     }
 
     // ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
-    ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
-    ssd1306_show(&oled_display);
-    sleep_ms(5000);
+    // ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
+    // ssd1306_show(&oled_display);
+    // sleep_ms(5000);
     
-    ssd1306_clear(&oled_display);
-    ssd1306_bmp_show_image_with_offset(&oled_display, media_bmp_light_intensity_icon_bmp_data, media_bmp_light_intensity_icon_bmp_size, 15, 16);
-    ssd1306_show(&oled_display);
-    sleep_ms(5000);
-
-    ssd1306_clear(&oled_display);
-    ssd1306_bmp_show_image_with_offset(&oled_display, media_bmp_humidity_icon_bmp_data, media_bmp_humidity_icon_bmp_size, 15, 16);
-    ssd1306_show(&oled_display);
-    sleep_ms(5000);
-
-    ssd1306_clear(&oled_display);
-    ssd1306_bmp_show_image_with_offset(&oled_display, media_bmp_temperature_icon_bmp_data, media_bmp_temperature_icon_bmp_size, 15, 16);
-    ssd1306_show(&oled_display);
-    sleep_ms(5000);
+    display_light_intensity(&oled_display, 31238.2322);
+    sleep_ms(6000);
+    display_light_intensity(&oled_display, 9);
+    sleep_ms(6000);
+    display_light_intensity(&oled_display, 70.12);
+    sleep_ms(6000);
+    display_light_intensity(&oled_display, 500);
+    sleep_ms(6000);
+    display_light_intensity(&oled_display, 1500);
+    sleep_ms(6000);
+    display_light_intensity(&oled_display, 29307);
+    sleep_ms(6000);
+    // display_temperature(&oled_display, 3.1);
+    // sleep_ms(6000);
+    // display_temperature(&oled_display, 72.1);
+    // sleep_ms(6000);
+    // display_temperature(&oled_display, -6.1);
+    // sleep_ms(6000);
 
     // mg_timer_add(&connection_manager, 3000, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
 

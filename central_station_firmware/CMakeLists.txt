@@ -43,6 +43,7 @@ add_executable(${PROJECT_NAME}
     src/bme680_port.c
     src/network.c
     src/utils.c
+    src/oled_display.c
     lib/pico-ssd1306/ssd1306.c
 )
 

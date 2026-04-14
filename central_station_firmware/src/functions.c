@@ -274,7 +274,7 @@ int8_t handshake(
     // Set the nrf24 module to standby-I mode to prepare it to enter TX mode and
     // wait for a while to ensure it's entered TX mode.
     nrf24_module->standby_mode();
-    sleep_ms(30);
+    sleep_ms(300);
 
     // Copy the address of the corresponding data pipe to the packet array. 
     // This is the payload of the packet that the nrf24 module will send.

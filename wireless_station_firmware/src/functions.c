@@ -182,7 +182,12 @@ int8_t handshake(nrf_client_t *nrf24_module) {
         return (int8_t)-1;
 
     // Transmit this station's ID as an array of bytes.
-    nrf24_module->send_packet(station_id_in_bytes, sizeof(station_id_in_bytes));
+    int i = 0;
+    while (i < HANDSHAKE_SEND_ID_ATTEMPTS) {
+        nrf24_module->send_packet(station_id_in_bytes, sizeof(station_id_in_bytes));
+        i++;
+        sleep_ms(15);
+    }
 
     /* --------------------------------------------------------------------- */
     // Now the central station will send this station the new address to which
@@ -198,6 +203,7 @@ int8_t handshake(nrf_client_t *nrf24_module) {
             if (nrf24_module->read_packet(received_packet, sizeof(received_packet)) != ERROR)
                 break;
         }
+        sleep_ms(30);
     }
 
     // Update the destination address with the new one sent by the central station.
@@ -206,7 +212,7 @@ int8_t handshake(nrf_client_t *nrf24_module) {
     // Set the nrf24 module to standby-I mode to prepare it to enter TX mode and
     // wait for a while to ensure it's entered TX mode.
     nrf24_module->standby_mode();
-    sleep_ms(30);
+    sleep_ms(300);
 
     return (int8_t)0;
 }

@@ -22,6 +22,7 @@ typedef struct {
 #define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
 #define STATION_ID_BYTES_LENGTH 16
 #define NRF24_ADDRESS_SIZE 5
+#define HANDSHAKE_SEND_ID_ATTEMPTS 10
 #define DHT22_PIN 0
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85

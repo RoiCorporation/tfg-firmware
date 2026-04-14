@@ -18,21 +18,36 @@
 
 queue_t call_queue;
 
+bool display_reading_timer_callback(__unused struct repeating_timer *t) {
+    uint8_t *display_turn = (uint8_t *)t->user_data;
+    if (*display_turn == 9)
+        *display_turn = 0;
+    else
+        (*display_turn)++;
+    return true;
+}
 
 void core1_entry() {
-
-    queue_entry_t call_queue_entry;
-
-    queue_remove_blocking(&call_queue, &call_queue_entry);
     
+    // Queue entry that contains all the necessary structures and drivers
+    // to display and upload the station' sensor readings.
+    queue_entry_t call_queue_entry;
+    queue_remove_blocking(&call_queue, &call_queue_entry);
+
     // Array of ambient_info_t elements that holds the n-previous
     // sensor readings. It's used to check for potential upcoming 
     // hazards, such as a flood, a sudden fire or a gas leak.
     ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
-    
     ambient_info_t station_readings;
+    
+    struct repeating_timer timer;
+    uint8_t display_turn = 0;
+ 
+    add_repeating_timer_ms(3000, display_reading_timer_callback, &display_turn, &timer);
 
     while (1) {
+
+        tight_loop_contents();
 
         // Initialize the values inside the station readings struct.
         memcpy(station_readings.station_id, STATION_ID, STATION_ID_CHAR_LENGTH);
@@ -80,6 +95,71 @@ void core1_entry() {
         //     printf("Light intensity: %.2f\n", station_readings.light_intensity);
         // }
 
+        switch(display_turn) {
+            case 0:
+                display_temperature(
+                    call_queue_entry.oled_display,
+                    station_readings.temperature
+                );
+                break;
+            case 1:
+                display_humidity(
+                    call_queue_entry.oled_display,
+                    station_readings.humidity
+                );
+                break;
+            case 2:
+                display_light_intensity(
+                    call_queue_entry.oled_display,
+                    station_readings.light_intensity
+                );
+                break;
+            case 3:
+                display_air_pressure(
+                    call_queue_entry.oled_display,
+                    station_readings.air_pressure
+                );
+                break;
+            case 4:
+                display_air_quality_index(
+                    call_queue_entry.oled_display,
+                    station_readings.air_quality_index
+                );
+                break;
+            case 5:
+                display_carbon_monoxide_concentration(
+                    call_queue_entry.oled_display,
+                    station_readings.carbon_monoxide_concentration
+                );
+                break;
+            case 6:
+                display_methane_concentration(
+                    call_queue_entry.oled_display,
+                    station_readings.methane_concentration
+                );
+                break;
+            case 7:
+                display_propane_concentration(
+                    call_queue_entry.oled_display,
+                    station_readings.propane_concentration
+                );
+                break;
+            case 8:
+                display_alcohol_concentration(
+                    call_queue_entry.oled_display,
+                    station_readings.alcohol_concentration
+                );
+                break;
+            case 9:
+                display_hydrogen_gas_concentration(
+                    call_queue_entry.oled_display,
+                    station_readings.hydrogen_gas_concentration
+                );
+                break;
+            default:
+                break;
+        }
+
         for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
             previous_readings[i] = previous_readings[i + 1];
         }
@@ -92,10 +172,23 @@ void core1_entry() {
         }
 
         // Update the OLED display with the new readings.
+
+        // display_hydrogen_gas_concentration(call_queue_entry.oled_display, 512);
+        // sleep_ms(2000);
+        // display_hydrogen_gas_concentration(call_queue_entry.oled_display, 9177.123);
+        // sleep_ms(2000);
+        // display_hydrogen_gas_concentration(&oled_display, 8769);
+        // sleep_ms(3000);
+        // display_hydrogen_gas_concentration(&oled_display, 57252);
+        // sleep_ms(3000);
+        // display_hydrogen_gas_concentration(&oled_display, 10001.23);
+        // sleep_ms(3000);
+        // display_hydrogen_gas_concentration(&oled_display, 389);
+        // sleep_ms(3000);
+        // display_hydrogen_gas_concentration(&oled_display, 1333.528);
+        // sleep_ms(3000);
         
         if (mqtt_is_ready(&call_queue_entry.network_context) == 0) {
-            ssd1306_draw_string(call_queue_entry.oled_display, 0, 0, 1, "Station connected");
-            ssd1306_show(call_queue_entry.oled_display);
             publish_environmental_readings(
                 call_queue_entry.network_context.mqtt_connection,
                 &station_readings
@@ -177,31 +270,14 @@ int main() {
         printf("\n");
     }
 
-    // ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
-    // ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
-    // ssd1306_show(&oled_display);
-    // sleep_ms(5000);
+    ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
+    ssd1306_show(&oled_display);
 
-    display_hydrogen_gas_concentration(&oled_display, 512);
-    sleep_ms(3000);
-    display_hydrogen_gas_concentration(&oled_display, 9177.123);
-    sleep_ms(3000);
-    display_hydrogen_gas_concentration(&oled_display, 8769);
-    sleep_ms(3000);
-    display_hydrogen_gas_concentration(&oled_display, 57252);
-    sleep_ms(3000);
-    display_hydrogen_gas_concentration(&oled_display, 10001.23);
-    sleep_ms(3000);
-    display_hydrogen_gas_concentration(&oled_display, 389);
-    sleep_ms(3000);
-    display_hydrogen_gas_concentration(&oled_display, 1333.528);
-    sleep_ms(3000);
+    mg_timer_add(&connection_manager, 3000, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
 
-    // mg_timer_add(&connection_manager, 3000, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
-
-    // while (mqtt_is_ready(&network_context) != 0) {
-    //     mg_mgr_poll(&connection_manager, 1000);
-    // }
+    while (mqtt_is_ready(&network_context) != 0) {
+        mg_mgr_poll(&connection_manager, 1000);
+    }
 
     queue_init(&call_queue, sizeof(queue_entry_t), 1);
     
@@ -216,8 +292,8 @@ int main() {
     // Launch the other core to start reading values with the sensors 
     // of this station, displaying their measurements on the OLED display
     // and uploading them to the database.
-    // multicore_launch_core1(core1_entry);
-    // queue_add_blocking(&call_queue, &call_queue_entry);
+    multicore_launch_core1(core1_entry);
+    queue_add_blocking(&call_queue, &call_queue_entry);
 
     // Check for incoming connections from wireless stations.
     int8_t handshake_result = handshake(

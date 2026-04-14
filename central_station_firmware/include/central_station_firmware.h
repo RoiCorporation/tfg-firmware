@@ -12,7 +12,7 @@
 
 
 /* CONSTANTS*/
-#define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
+#define AMBIENT_INFO_FIELD_COUNT (sizeof(ambient_info_t) - STATION_ID_CHAR_LENGTH) / sizeof(float)
 #define STATION_ID_BYTES_LENGTH 16
 #define STATION_ID_CHAR_LENGTH 37
 #define NRF24_ADDRESS_SIZE 5
@@ -86,7 +86,7 @@ typedef struct {
     struct bme68x_dev bme680_sensor;
     struct bme68x_conf bme680_conf;
     struct bme68x_heatr_conf bme680_heater_conf;
-    ssd1306_t* oled_display;
+    ssd1306_t *oled_display;
     network_ctx_t network_context;
 } queue_entry_t;
 #endif
@@ -96,13 +96,13 @@ typedef struct {
 // Declarations for setup functions.
 #ifndef TEST
 void initialize_station(
-    struct bme68x_dev* bme680_sensor,
-    struct bme68x_conf* bme680_conf,
-    struct bme68x_heatr_conf* bme680_heater_conf,
-    nrf_client_t* nrf24_module,
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf,
+    nrf_client_t *nrf24_module,
     station_id_address_map_t station_id_to_nrf24_address_buffer[],
-    ssd1306_t* oled_display,
-    struct mg_mgr* connection_manager,
+    ssd1306_t *oled_display,
+    struct mg_mgr *connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -112,12 +112,12 @@ void initialize_station(
 );
 void initialize_i2c_bus();
 void initialize_bme680_sensor(
-    struct bme68x_dev* bme680_sensor,
-    struct bme68x_conf* bme680_conf,
-    struct bme68x_heatr_conf* bme680_heater_conf
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf
 );
 void initialize_nrf24_module(
-    nrf_client_t* nrf24_module,
+    nrf_client_t *nrf24_module,
     station_id_address_map_t station_id_to_nrf24_address_buffer[],
     uint8_t copi_pin,
     uint8_t cipo_pin,

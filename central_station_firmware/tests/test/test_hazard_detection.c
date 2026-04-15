@@ -6,82 +6,299 @@
 
 TEST_SOURCE_FILE("hazards.c")
 
+
 void setUp(void) {}
 void tearDown(void) {}
 
 
-void test_analyze_hazards_continuously_incrementing_parameters(void) {
-  ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
-  
-  // Test with a list of previous readings that poses a hazard due to
-  // temperature rising continuously above the established safeguard.
-  create_rising_temperature_hazard(previous_readings);
-  TEST_ASSERT_EQUAL_INT(TEMPERATURE_RISING_HAZARD, analyze_hazards(previous_readings));
+void test_analyze_hazards_continuously_incrementing_parameters(void)
+{
+    ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
 
-  // Test with a list of previous readings that poses a hazard due to
-  // humidity rising continuously above the established safeguard.
-  create_rising_humidity_hazard(previous_readings);
-  TEST_ASSERT_EQUAL_INT(HUMIDITY_RISING_HAZARD, analyze_hazards(previous_readings));
+    // Test with a list of previous readings that poses a hazard due to
+    // temperature rising continuously above the established safeguard.
+    create_rising_temperature_hazard(previous_readings);
+    TEST_ASSERT_EQUAL_INT(TEMPERATURE_RISING_HAZARD, analyze_hazards(previous_readings));
 
-  // TODO: Uncomment these last two cases when the firmware is ready to 
-  // read the air_pressure and air quality data.
-  // Test with a list of previous readings that poses a hazard due to
-  // air air_pressure rising continuously above the established safeguard.
-  // create_rising_pressure_hazard(previous_readings);
-  // TEST_ASSERT_EQUAL_INT(PRESSURE_RISING_HAZARD, analyze_hazards(previous_readings));
+    // Test with a list of previous readings that poses a hazard due to
+    // humidity rising continuously above the established safeguard.
+    create_rising_humidity_hazard(previous_readings);
+    TEST_ASSERT_EQUAL_INT(HUMIDITY_RISING_HAZARD, analyze_hazards(previous_readings));
 
-  // Test with a list of previous readings that poses a hazard due to
-  // air quality worsening continuously beyond the established safeguard.
-  // create_worsening_air_quality_hazard(previous_readings);
-  // TEST_ASSERT_EQUAL_INT(AIR_QUALITY_WORSENING_HAZARD, analyze_hazards(previous_readings));
+    // Test with a list of previous readings that poses a hazard due to
+    // air quality worsening continuously beyond the established safeguard.
+    create_worsening_air_quality_hazard(previous_readings);
+    TEST_ASSERT_EQUAL_INT(AIR_QUALITY_WORSENING_HAZARD, analyze_hazards(previous_readings));
 
-  // Test with a list of previous readings that doesn't present any hazards whatsoever.
-  create_correct_previous_readings_list(previous_readings);
-  TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+    // Test with a list of previous readings that poses a hazard due to the
+    // carbon monoxide concentration worsening continuously beyond the established
+    // safeguard.
+    create_worsening_carbon_monoxide_hazard(previous_readings);
+    TEST_ASSERT_EQUAL_INT(CARBON_MONOXIDE_WORSENING_HAZARD, analyze_hazards(previous_readings));
+
+    // Test with a list of previous readings that poses a hazard due to the
+    // methane concentration worsening continuously beyond the established
+    // safeguard.
+    create_worsening_methane_hazard(previous_readings);
+    TEST_ASSERT_EQUAL_INT(METHANE_WORSENING_HAZARD, analyze_hazards(previous_readings));
+
+    // Test with a list of previous readings that poses a hazard due to the
+    // propane concentration worsening continuously beyond the established
+    // safeguard.
+    create_worsening_propane_hazard(previous_readings);
+    TEST_ASSERT_EQUAL_INT(PROPANE_WORSENING_HAZARD, analyze_hazards(previous_readings));
+
+    // Test with a list of previous readings that poses a hazard due to the
+    // alcohol concentration worsening continuously beyond the established
+    // safeguard.
+    create_worsening_alcohol_hazard(previous_readings);
+    TEST_ASSERT_EQUAL_INT(ALCOHOL_WORSENING_HAZARD, analyze_hazards(previous_readings));
+
+    // Test with a list of previous readings that poses a hazard due to the
+    // hydrogen gas concentration worsening continuously beyond the established
+    // safeguard.
+    create_worsening_hydrogen_gas_hazard(previous_readings);
+    TEST_ASSERT_EQUAL_INT(HYDROGEN_GAS_WORSENING_HAZARD, analyze_hazards(previous_readings));
+
+    // Test with a list of previous readings that doesn't present any hazards whatsoever.
+    create_correct_previous_readings_list(previous_readings);
+    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
 }
 
 
 void test_analyze_hazards_breaking_incrementing_parameter_series(void) {
-  ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
+    ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
+    create_correct_previous_readings_list(previous_readings);
 
-  for (int i = 0; i < AMBIENT_INFO_FIELD_COUNT; i++) {
-    switch(i) {
-      case 0:
-        create_rising_temperature_hazard(previous_readings);
-        for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
-          previous_readings[j].temperature += 0.1;
-          TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
-          previous_readings[j].temperature -= 0.1;
+    for (int i = 0; i < AMBIENT_INFO_FIELD_COUNT; i++) {
+        switch (i) {
+            case 0:
+                create_rising_temperature_hazard(previous_readings);
+                for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                    previous_readings[j].temperature += 0.1;
+                    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                    previous_readings[j].temperature -= 0.1;
+                }
+                break;
+
+            case 1:
+                create_rising_humidity_hazard(previous_readings);
+                for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                    previous_readings[j].humidity += 0.1;
+                    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                    previous_readings[j].humidity -= 0.1;
+                }
+                break;
+
+            case 2:
+                // Unused, it doesn't make sense to establish a threshold for the light intensity.
+                break;
+
+            case 3:
+                // Unused, it doesn't make sense to establish a threshold for the air pressure.
+                break;
+
+            case 4:
+                create_worsening_air_quality_hazard(previous_readings);
+                for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                    previous_readings[j].air_quality_index += 0.1;
+                    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                    previous_readings[j].air_quality_index -= 0.1;
+                }
+                break;
+
+            case 5:
+                create_worsening_carbon_monoxide_hazard(previous_readings);
+                for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                    previous_readings[j].carbon_monoxide_concentration += 0.1;
+                    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                    previous_readings[j].carbon_monoxide_concentration -= 0.1;
+                }
+                break;
+
+            case 6:
+                create_worsening_methane_hazard(previous_readings);
+                for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                    previous_readings[j].methane_concentration += 0.1;
+                    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                    previous_readings[j].methane_concentration -= 0.1;
+                }
+                break;
+
+            case 7:
+                create_worsening_propane_hazard(previous_readings);
+                for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                    previous_readings[j].propane_concentration += 0.1;
+                    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                    previous_readings[j].propane_concentration -= 0.1;
+                }
+                break;
+
+            case 8:
+                create_worsening_alcohol_hazard(previous_readings);
+                for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                    previous_readings[j].alcohol_concentration += 0.1;
+                    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                    previous_readings[j].alcohol_concentration -= 0.1;
+                }
+                break;
+
+            case 9:
+                create_worsening_hydrogen_gas_hazard(previous_readings);
+                for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                    previous_readings[j].hydrogen_gas_concentration += 0.1;
+                    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                    previous_readings[j].hydrogen_gas_concentration -= 0.1;
+                }
+                break;
+
+            default:
+                break;
+
         }
-        break;
-      case 1:
-        create_rising_humidity_hazard(previous_readings);
-        for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
-          previous_readings[j].humidity += 0.1;
-          TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
-          previous_readings[j].humidity -= 0.1;
-        }
-        break;
-      case 2:
-        create_rising_pressure_hazard(previous_readings);
-        for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
-          previous_readings[j].air_pressure += 0.1;
-          TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
-          previous_readings[j].air_pressure -= 0.1;
-        }
-        break;
-      case 3:
-        create_worsening_air_quality_hazard(previous_readings);
-        for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
-          previous_readings[j].air_quality_index += 0.1;
-          TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
-          previous_readings[j].air_quality_index -= 0.1;
-        }
-        break;
-      default:
-        break;
+
+        clean_previous_readings_list(previous_readings); // Reset the previous readings list.
     }
+}
 
-    clean_previous_readings_list(previous_readings);  // Reset the previous readings list.
-  }
+
+void test_analyze_hazards_over_threshold_parameters(void)
+{
+    ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
+    create_correct_previous_readings_list(previous_readings);
+
+    for (int i = 0; i < AMBIENT_INFO_FIELD_COUNT; i++) {
+        switch (i) {
+        case 0:
+            for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                float temperature_before = previous_readings[j].temperature;
+                previous_readings[j].temperature = TEMPERATURE_HAZARD_THRESHOLD + 0.1;
+                TEST_ASSERT_EQUAL_INT(TEMPERATURE_RISING_HAZARD, analyze_hazards(previous_readings));
+                previous_readings[j].temperature = TEMPERATURE_HAZARD_THRESHOLD;
+                TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                previous_readings[j].temperature = temperature_before;
+            }
+            break;
+
+        case 1:
+            // Unusued, the humidity is relative and it doesn't make sense to establish
+            // a threshold.
+            break;
+
+        case 2:
+            // Unused, it doesn't make sense to establish a threshold for the light intensity.
+            break;
+
+        case 3:
+            // Unused, it doesn't make sense to establish a threshold for the air pressure.
+            break;
+
+        case 4:
+            for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                float air_quality_index_before =
+                    previous_readings[j].air_quality_index;
+                previous_readings[j].air_quality_index =
+                    AIR_QUALITY_HAZARD_THRESHOLD + 0.1;
+                TEST_ASSERT_EQUAL_INT(
+                    AIR_QUALITY_WORSENING_HAZARD,
+                    analyze_hazards(previous_readings));
+                previous_readings[j].air_quality_index =
+                    AIR_QUALITY_HAZARD_THRESHOLD;
+                TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                previous_readings[j].air_quality_index =
+                    air_quality_index_before;
+            }
+            break;
+
+        case 5:
+            for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                float carbon_monoxide_concentration_before =
+                    previous_readings[j].carbon_monoxide_concentration;
+                previous_readings[j].carbon_monoxide_concentration =
+                    CARBON_MONOXIDE_HAZARD_THRESHOLD + 0.1;
+                TEST_ASSERT_EQUAL_INT(
+                    CARBON_MONOXIDE_WORSENING_HAZARD,
+                    analyze_hazards(previous_readings));
+                previous_readings[j].carbon_monoxide_concentration =
+                    CARBON_MONOXIDE_HAZARD_THRESHOLD;
+                TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                previous_readings[j].carbon_monoxide_concentration =
+                    carbon_monoxide_concentration_before;
+            }
+            break;
+
+        case 6:
+            for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                float methane_concentration_before =
+                    previous_readings[j].methane_concentration;
+                previous_readings[j].methane_concentration =
+                    METHANE_HAZARD_THRESHOLD + 0.1;
+                TEST_ASSERT_EQUAL_INT(
+                    METHANE_WORSENING_HAZARD,
+                    analyze_hazards(previous_readings));
+                previous_readings[j].methane_concentration =
+                    METHANE_HAZARD_THRESHOLD;
+                TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                previous_readings[j].methane_concentration =
+                    methane_concentration_before;
+            }
+            break;
+
+        case 7:
+            for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                float propane_concentration_before =
+                    previous_readings[j].propane_concentration;
+                previous_readings[j].propane_concentration =
+                    PROPANE_HAZARD_THRESHOLD + 0.1;
+                TEST_ASSERT_EQUAL_INT(
+                    PROPANE_WORSENING_HAZARD,
+                    analyze_hazards(previous_readings));
+                previous_readings[j].propane_concentration =
+                    PROPANE_HAZARD_THRESHOLD;
+                TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                previous_readings[j].propane_concentration =
+                    propane_concentration_before;
+            }
+            break;
+
+        case 8:
+            for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                float alcohol_concentration_before =
+                    previous_readings[j].alcohol_concentration;
+                previous_readings[j].alcohol_concentration =
+                    ALCOHOL_HAZARD_THRESHOLD + 0.1;
+                TEST_ASSERT_EQUAL_INT(
+                    ALCOHOL_WORSENING_HAZARD,
+                    analyze_hazards(previous_readings));
+                previous_readings[j].alcohol_concentration =
+                    ALCOHOL_HAZARD_THRESHOLD;
+                TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                previous_readings[j].alcohol_concentration =
+                    alcohol_concentration_before;
+            }
+            break;
+
+        case 9:
+            for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
+                float hydrogen_gas_concentration_before =
+                    previous_readings[j].hydrogen_gas_concentration;
+                previous_readings[j].hydrogen_gas_concentration =
+                    HYDROGEN_GAS_HAZARD_THRESHOLD + 0.1;
+                TEST_ASSERT_EQUAL_INT(
+                    HYDROGEN_GAS_WORSENING_HAZARD,
+                    analyze_hazards(previous_readings));
+                previous_readings[j].hydrogen_gas_concentration =
+                    HYDROGEN_GAS_HAZARD_THRESHOLD;
+                TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
+                previous_readings[j].hydrogen_gas_concentration =
+                    hydrogen_gas_concentration_before;
+            }
+
+        default:
+            break;
+
+        }
+
+        clean_previous_readings_list(previous_readings); // Reset the previous readings list.
+    }
 }

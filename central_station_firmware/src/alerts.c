@@ -24,11 +24,23 @@ void activate_hazard_alert(unsigned int hazard_code) {
         case HUMIDITY_RISING_HAZARD:
             play_humidity_hazard_alarm(slice, channel);
             break;
-        case PRESSURE_RISING_HAZARD:
-            play_air_pressure_hazard_alarm(slice, channel);
-            break;
         case AIR_QUALITY_WORSENING_HAZARD:
             play_air_quality_index_hazard_alarm(slice, channel);
+            break;
+        case CARBON_MONOXIDE_WORSENING_HAZARD:
+            play_carbon_monoxide_hazard_alarm(slice, channel);
+            break;
+        case METHANE_WORSENING_HAZARD:
+            play_methane_hazard_alarm(slice, channel);
+            break;
+        case PROPANE_WORSENING_HAZARD:
+            play_propane_hazard_alarm(slice, channel);
+            break;
+        case ALCOHOL_WORSENING_HAZARD:
+            play_alcohol_hazard_alarm(slice, channel);
+            break;
+        case HYDROGEN_GAS_WORSENING_HAZARD:
+            play_hydrogen_gas_hazard_alarm(slice, channel);
             break;
         default:
             break;
@@ -88,42 +100,17 @@ void play_humidity_hazard_alarm(unsigned int slice, unsigned int channel) {
 
 
 /**
- * @brief Use the buzzer to play the alarm specific to the rising air pressure hazard.
- * 
- * @param slice the PWM slice number for the buzzer pin.
- * @param channel the PWM channel number for the buzzer pin.
- */
-void play_air_pressure_hazard_alarm(unsigned int slice, unsigned int channel) {
-    unsigned int frequencies[2] = {NOTE_B4, NOTE_F5};
-    float clkdiv = 4.0f;
-
-    for (int i = 0; i < NUMBER_ALARM_REPETITIONS; i++) {
-        for (int t = 0; t < 2; t++) {
-            float wrap = (125000000 / (clkdiv * frequencies[t])) - 1;
-            pwm_set_clkdiv(slice, clkdiv);
-            pwm_set_wrap(slice, (unsigned int)wrap);
-            pwm_set_chan_level(slice, channel, wrap / 2);
-
-            pwm_set_enabled(slice, true);
-            sleep_ms(PRESSURE_HAZARD_ALARM_TONE_DURATION);
-        }
-    }
-    pwm_set_enabled(slice, false); // Turn off the buzzer after the alarm.
-}
-
-
-/**
  * @brief Use the buzzer to play the alarm specific to the worsening AQI hazard.
  * 
  * @param slice the PWM slice number for the buzzer pin.
  * @param channel the PWM channel number for the buzzer pin.
  */
 void play_air_quality_index_hazard_alarm(unsigned int slice, unsigned int channel) {
-    unsigned int frequencies[2] = {NOTE_B4, NOTE_F5};
+    unsigned int frequencies[3] = {NOTE_B4, NOTE_A5, NOTE_G5};
     float clkdiv = 4.0f;
 
     for (int i = 0; i < NUMBER_ALARM_REPETITIONS; i++) {
-        for (int t = 0; t < 2; t++) {
+        for (int t = 0; t < NUMBER_TONES_AIR_QUALITY_INDEX_HAZARD_ALARM; t++) {
             float wrap = (125000000 / (clkdiv * frequencies[t])) - 1;
             pwm_set_clkdiv(slice, clkdiv);
             pwm_set_wrap(slice, (unsigned int)wrap);
@@ -131,6 +118,136 @@ void play_air_quality_index_hazard_alarm(unsigned int slice, unsigned int channe
 
             pwm_set_enabled(slice, true);
             sleep_ms(AIR_QUALITY_INDEX_HAZARD_ALARM_TONE_DURATION);
+        }
+    }
+    pwm_set_enabled(slice, false); // Turn off the buzzer after the alarm.
+}
+
+
+/**
+ * @brief Use the buzzer to play the alarm specific to the rising carbon monoxide
+ * concentration hazard.
+ * 
+ * @param slice the PWM slice number for the buzzer pin.
+ * @param channel the PWM channel number for the buzzer pin.
+ */
+void play_carbon_monoxide_hazard_alarm(unsigned int slice, unsigned int channel) {
+    unsigned int frequencies[NUMBER_TONES_CARBON_MONOXIDE_HAZARD_ALARM] = {NOTE_F5, NOTE_B5};
+    float clkdiv = 4.0f;
+
+    for (int i = 0; i < NUMBER_ALARM_REPETITIONS; i++) {
+        for (int t = 0; t < NUMBER_TONES_CARBON_MONOXIDE_HAZARD_ALARM; t++) {
+            float wrap = (125000000 / (clkdiv * frequencies[t])) - 1;
+            pwm_set_clkdiv(slice, clkdiv);
+            pwm_set_wrap(slice, (unsigned int)wrap);
+            pwm_set_chan_level(slice, channel, wrap / 2);
+
+            pwm_set_enabled(slice, true);
+            sleep_ms(CARBON_MONOXIDE_HAZARD_ALARM_TONE_DURATION);
+        }
+    }
+    pwm_set_enabled(slice, false); // Turn off the buzzer after the alarm.
+}
+
+
+/**
+ * @brief Use the buzzer to play the alarm specific to the rising methane
+ * concentration hazard.
+ * 
+ * @param slice the PWM slice number for the buzzer pin.
+ * @param channel the PWM channel number for the buzzer pin.
+ */
+void play_methane_hazard_alarm(unsigned int slice, unsigned int channel) {
+    unsigned int frequencies[NUMBER_TONES_METHANE_HAZARD_ALARM] = {NOTE_B4, NOTE_G5, NOTE_F5, NOTE_A5, NOTE_B5};
+    float clkdiv = 4.0f;
+
+    for (int i = 0; i < NUMBER_ALARM_REPETITIONS; i++) {
+        for (int t = 0; t < NUMBER_TONES_METHANE_HAZARD_ALARM; t++) {
+            float wrap = (125000000 / (clkdiv * frequencies[t])) - 1;
+            pwm_set_clkdiv(slice, clkdiv);
+            pwm_set_wrap(slice, (unsigned int)wrap);
+            pwm_set_chan_level(slice, channel, wrap / 2);
+
+            pwm_set_enabled(slice, true);
+            sleep_ms(METHANE_HAZARD_ALARM_TONE_DURATION);
+        }
+    }
+    pwm_set_enabled(slice, false); // Turn off the buzzer after the alarm.
+}
+
+
+/**
+ * @brief Use the buzzer to play the alarm specific to the rising propane
+ * concentration hazard.
+ * 
+ * @param slice the PWM slice number for the buzzer pin.
+ * @param channel the PWM channel number for the buzzer pin.
+ */
+void play_propane_hazard_alarm(unsigned int slice, unsigned int channel) {
+    unsigned int frequencies[NUMBER_TONES_PROPANE_HAZARD_ALARM] = {NOTE_B5, NOTE_B5};
+    float clkdiv = 4.0f;
+
+    for (int i = 0; i < NUMBER_ALARM_REPETITIONS; i++) {
+        for (int t = 0; t < NUMBER_TONES_PROPANE_HAZARD_ALARM; t++) {
+            float wrap = (125000000 / (clkdiv * frequencies[t])) - 1;
+            pwm_set_clkdiv(slice, clkdiv);
+            pwm_set_wrap(slice, (unsigned int)wrap);
+            pwm_set_chan_level(slice, channel, wrap / 2);
+
+            pwm_set_enabled(slice, true);
+            sleep_ms(PROPANE_HAZARD_ALARM_TONE_DURATION);
+        }
+    }
+    pwm_set_enabled(slice, false); // Turn off the buzzer after the alarm.
+}
+
+
+/**
+ * @brief Use the buzzer to play the alarm specific to the rising alcohol
+ * concentration hazard.
+ * 
+ * @param slice the PWM slice number for the buzzer pin.
+ * @param channel the PWM channel number for the buzzer pin.
+ */
+void play_alcohol_hazard_alarm(unsigned int slice, unsigned int channel) {
+    unsigned int frequencies[NUMBER_TONES_ALCOHOL_HAZARD_ALARM] = {NOTE_B5, NOTE_A5, NOTE_G5, NOTE_F5, NOTE_B4};
+    float clkdiv = 4.0f;
+
+    for (int i = 0; i < NUMBER_ALARM_REPETITIONS; i++) {
+        for (int t = 0; t < NUMBER_TONES_ALCOHOL_HAZARD_ALARM; t++) {
+            float wrap = (125000000 / (clkdiv * frequencies[t])) - 1;
+            pwm_set_clkdiv(slice, clkdiv);
+            pwm_set_wrap(slice, (unsigned int)wrap);
+            pwm_set_chan_level(slice, channel, wrap / 2);
+
+            pwm_set_enabled(slice, true);
+            sleep_ms(ALCOHOL_HAZARD_ALARM_TONE_DURATION);
+        }
+    }
+    pwm_set_enabled(slice, false); // Turn off the buzzer after the alarm.
+}
+
+
+/**
+ * @brief Use the buzzer to play the alarm specific to the rising hydrogen gas
+ * concentration hazard.
+ * 
+ * @param slice the PWM slice number for the buzzer pin.
+ * @param channel the PWM channel number for the buzzer pin.
+ */
+void play_hydrogen_gas_hazard_alarm(unsigned int slice, unsigned int channel) {
+    unsigned int frequencies[NUMBER_TONES_HYDROGEN_GAS_HAZARD_ALARM] = {NOTE_B4, NOTE_F5, NOTE_B5};
+    float clkdiv = 4.0f;
+
+    for (int i = 0; i < NUMBER_ALARM_REPETITIONS; i++) {
+        for (int t = 0; t < NUMBER_TONES_HYDROGEN_GAS_HAZARD_ALARM; t++) {
+            float wrap = (125000000 / (clkdiv * frequencies[t])) - 1;
+            pwm_set_clkdiv(slice, clkdiv);
+            pwm_set_wrap(slice, (unsigned int)wrap);
+            pwm_set_chan_level(slice, channel, wrap / 2);
+
+            pwm_set_enabled(slice, true);
+            sleep_ms(HYDROGEN_GAS_HAZARD_ALARM_TONE_DURATION);
         }
     }
     pwm_set_enabled(slice, false); // Turn off the buzzer after the alarm.

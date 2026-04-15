@@ -34,11 +34,24 @@ void core1_entry() {
     queue_entry_t call_queue_entry;
     queue_remove_blocking(&call_queue, &call_queue_entry);
 
+    ambient_info_t station_readings;
+
     // Array of ambient_info_t elements that holds the n-previous
     // sensor readings. It's used to check for potential upcoming 
     // hazards, such as a flood, a sudden fire or a gas leak.
     ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
-    ambient_info_t station_readings;
+    for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
+        previous_readings[i].temperature = 0;
+        previous_readings[i].humidity = 0;
+        previous_readings[i].light_intensity = 0;
+        previous_readings[i].air_pressure = 0;
+        previous_readings[i].air_quality_index = 0;
+        previous_readings[i].carbon_monoxide_concentration = 0;
+        previous_readings[i].methane_concentration = 0;
+        previous_readings[i].propane_concentration = 0;
+        previous_readings[i].alcohol_concentration = 0;
+        previous_readings[i].hydrogen_gas_concentration = 0;
+    }
     
     struct repeating_timer timer;
     uint8_t display_turn = 0;
@@ -52,16 +65,16 @@ void core1_entry() {
         // Initialize the values inside the station readings struct.
         memcpy(station_readings.station_id, STATION_ID, STATION_ID_CHAR_LENGTH);
         station_readings.station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
-        station_readings.temperature = NAN;
-        station_readings.humidity = NAN;
-        station_readings.light_intensity = NAN;
-        station_readings.air_pressure = NAN;
-        station_readings.air_quality_index = NAN;
-        station_readings.carbon_monoxide_concentration = NAN;
-        station_readings.methane_concentration = NAN;
-        station_readings.propane_concentration = NAN;
-        station_readings.alcohol_concentration = NAN;
-        station_readings.hydrogen_gas_concentration = NAN;
+        station_readings.temperature = 0;
+        station_readings.humidity = 0;
+        station_readings.light_intensity = 0;
+        station_readings.air_pressure = 0;
+        station_readings.air_quality_index = 0;
+        station_readings.carbon_monoxide_concentration = 0;
+        station_readings.methane_concentration = 0;
+        station_readings.propane_concentration = 0;
+        station_readings.alcohol_concentration = 0;
+        station_readings.hydrogen_gas_concentration = 0;
 
         // if (read_temperature_and_humidity(&station_readings) == -1) {
         //     printf("Error when reading the temperature and humidity sensor. Error number %d\n",
@@ -94,6 +107,31 @@ void core1_entry() {
         // else {
         //     printf("Light intensity: %.2f\n", station_readings.light_intensity);
         // }
+
+        //TODO: change this when we find a way to actually calculate the correct AQI + gas concentrations.
+        station_readings.air_quality_index = 0;
+        station_readings.carbon_monoxide_concentration = 0;
+        station_readings.methane_concentration = 0;
+        station_readings.propane_concentration = 0;
+        station_readings.alcohol_concentration = 0;
+        station_readings.hydrogen_gas_concentration = 0;
+
+        printf("Temperature: %f; Humidity: %f; ID: %s\n",
+            station_readings.temperature,
+            station_readings.humidity,
+            station_readings.station_id
+        );
+
+        for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
+            previous_readings[i] = previous_readings[i + 1];
+        }
+        previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY - 1] = station_readings;
+
+        int hazard_code = analyze_hazards(previous_readings);
+        if (hazard_code != 0) {
+            printf("Potential hazard detected! Code: %d\n", hazard_code);
+            activate_hazard_alert(hazard_code);
+        }
 
         switch(display_turn) {
             case 0:
@@ -159,18 +197,6 @@ void core1_entry() {
             default:
                 break;
         }
-
-        for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
-            previous_readings[i] = previous_readings[i + 1];
-        }
-        previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY - 1] = station_readings;
-
-        int hazard_code = analyze_hazards(previous_readings);
-        if (hazard_code != 0) {
-            printf("Potential hazard detected! Code: %d\n", hazard_code);
-            activate_hazard_alert(hazard_code);
-        }
-
         // Update the OLED display with the new readings.
 
         // display_hydrogen_gas_concentration(call_queue_entry.oled_display, 512);

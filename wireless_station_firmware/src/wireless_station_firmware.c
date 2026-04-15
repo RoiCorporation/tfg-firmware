@@ -78,17 +78,17 @@ int main() {
             HANDSHAKE_ERROR);
     }
 
-    else {
+    if (1 == 1) {
 
         while (1) {
 
             tight_loop_contents();
 
-            station_readings.temperature = NAN;
-            station_readings.humidity = NAN;
-            station_readings.light_intensity = NAN;
-            station_readings.air_pressure = NAN;
-            station_readings.air_quality_index = NAN;
+            station_readings.temperature = 0;
+            station_readings.humidity = 0;
+            station_readings.light_intensity = 0;
+            station_readings.air_pressure = 0;
+            station_readings.air_quality_index = 0;
 
             if (read_temperature_and_humidity(&station_readings) == -1) {
                 printf("Error when reading the temperature and humidity sensor. Error number %d\n",
@@ -118,7 +118,7 @@ int main() {
             }
 
             //TODO: change this when we find a way to actually calculate the correct AQI.
-            station_readings.air_quality_index = 300;
+            station_readings.air_quality_index = 80;
 
             for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
                 previous_readings[i] = previous_readings[i + 1];

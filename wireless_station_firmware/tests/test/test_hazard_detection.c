@@ -102,7 +102,7 @@ void test_analyze_hazards_over_threshold_parameters(void) {
             break;
 
         case 1:
-            // Unusued, the humidity is relative and it doesn't make sense to establish
+            // Unused, the humidity is relative and it doesn't make sense to establish
             // a threshold.
             break;
 

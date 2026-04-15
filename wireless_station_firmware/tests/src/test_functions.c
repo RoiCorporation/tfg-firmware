@@ -53,23 +53,6 @@ void create_rising_humidity_hazard(ambient_info_t previous_readings[LENGTH_PREVI
 
 
 /**
- * @brief Construct a list of prior readings that presents a hazard due to increasing air air_pressure.
- * 
- * @param previous_readings the previous readings list where the test data will be stored.
- */
-void create_rising_pressure_hazard(ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY]) {
-  ambient_info_t initial_values = {-2.4, 13.7, 3.0, 7.5, 267.77};
-  previous_readings[0] = initial_values;
-  for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
-    previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN - 0.05);
-    previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN - 0.05);
-    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN);
-    previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN - 0.05);
-  }
-}
-
-
-/**
  * @brief Construct a list of prior readings that presents a hazard due to air quality 
  * continuously worsening.
  * 

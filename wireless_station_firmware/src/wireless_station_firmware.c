@@ -78,7 +78,7 @@ int main() {
             HANDSHAKE_ERROR);
     }
 
-    if (1 == 1) {
+    else {
 
         while (1) {
 
@@ -104,7 +104,7 @@ int main() {
                     BME680_READ_ERROR);
             }
             else {
-                printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, Gas resistance (ohm) %d\n", station_readings.temperature, 
+                printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, AQI (ohm) %f\n", station_readings.temperature, 
                     station_readings.humidity, station_readings.air_pressure, 
                     station_readings.air_quality_index);
             }
@@ -116,6 +116,9 @@ int main() {
             else {
                 printf("Light intensity: %.2f\n", station_readings.light_intensity);
             }
+
+            //TODO: change this when we find a way to actually calculate the correct AQI.
+            station_readings.air_quality_index = 300;
 
             for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
                 previous_readings[i] = previous_readings[i + 1];

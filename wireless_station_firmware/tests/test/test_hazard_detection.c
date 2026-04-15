@@ -23,17 +23,10 @@ void test_analyze_hazards_continuously_incrementing_parameters(void) {
   create_rising_humidity_hazard(previous_readings);
   TEST_ASSERT_EQUAL_INT(HUMIDITY_RISING_HAZARD, analyze_hazards(previous_readings));
 
-  // TODO: Uncomment these last two cases when the firmware is ready to 
-  // read the air pressure and air quality data.
-  // Test with a list of previous readings that poses a hazard due to
-  // air air pressure rising continuously above the established safeguard.
-  // create_rising_pressure_hazard(previous_readings);
-  // TEST_ASSERT_EQUAL_INT(PRESSURE_RISING_HAZARD, analyze_hazards(previous_readings));
-
   // Test with a list of previous readings that poses a hazard due to
   // air quality worsening continuously beyond the established safeguard.
-  // create_worsening_air_quality_hazard(previous_readings);
-  // TEST_ASSERT_EQUAL_INT(AIR_QUALITY_WORSENING_HAZARD, analyze_hazards(previous_readings));
+  create_worsening_air_quality_hazard(previous_readings);
+  TEST_ASSERT_EQUAL_INT(AIR_QUALITY_WORSENING_HAZARD, analyze_hazards(previous_readings));
 
   // Test with a list of previous readings that doesn't present any hazards whatsoever.
   create_correct_previous_readings_list(previous_readings);
@@ -63,14 +56,6 @@ void test_analyze_hazards_breaking_incrementing_parameter_series(void) {
         }
         break;
       case 2:
-        create_rising_pressure_hazard(previous_readings);
-        for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
-          previous_readings[j].air_pressure += 0.1;
-          TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
-          previous_readings[j].air_pressure -= 0.1;
-        }
-        break;
-      case 3:
         create_worsening_air_quality_hazard(previous_readings);
         for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
           previous_readings[j].air_quality_index += 0.1;

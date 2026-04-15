@@ -36,7 +36,7 @@ the device from which to read.
 
 
 
-## Generate icons for the OLED display
+## 🌡️ Generate icons for the OLED display
 1. From the firmware's root folder, run [this script](scripts/generate_icon_bytemap.sh)
 ```
 ./scripts/generate_icon_bytemap.sh

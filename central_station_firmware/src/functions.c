@@ -16,11 +16,11 @@
  * BME680 sensor.
  * @param bme680_conf pointer to the struct for the BME680 sensor's configuration.
  * @param bme680_heater_conf pointer to the struct for the configuration of the 
+ * @param oled_display pointer to the OLED display driver.
  * BME680 sensor's heater.
  * @param nrf24_module pointer to the NRF24L01 module driver.
  * @param station_id_to_nrf24_address_buffer buffer that maps the associated
  * wireless stations ID's with the NRF24L01 module data pipe addresses.
- * @param oled_display pointer to the OLED display driver.
  * @param connection_manager pointer to the connection manager.
  * @param copi_pin SPI COPI microcontroller pin.
  * @param cipo_pin CIPO microcontroller pin.
@@ -33,9 +33,9 @@ void initialize_station(
     struct bme68x_dev *bme680_sensor,
     struct bme68x_conf *bme680_conf,
     struct bme68x_heatr_conf *bme680_heater_conf,
+    ssd1306_t *oled_display,
     nrf_client_t *nrf24_module,
     station_id_address_map_t station_id_to_nrf24_address_buffer[],
-    ssd1306_t *oled_display,
     struct mg_mgr *connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
@@ -49,6 +49,10 @@ void initialize_station(
     initialize_i2c_bus();
     sleep_ms(200);
     initialize_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf);
+    oled_display->external_vcc=false;
+    ssd1306_init(oled_display, 128, 64, OLED_DISPLAY_I2C_ADDRESS, i2c0);
+    sleep_ms(200);
+    ssd1306_clear(oled_display);
     initialize_station_id_to_address_buffer(
         station_id_to_nrf24_address_buffer,
         NRF24_ADDRESSES_BUFFER_SIZE,
@@ -64,10 +68,6 @@ void initialize_station(
         ce_pin,
         spi_baudrate
     );
-    oled_display->external_vcc=false;
-    ssd1306_init(oled_display, 128, 64, OLED_DISPLAY_I2C_ADDRESS, i2c0);
-    sleep_ms(200);
-    ssd1306_clear(oled_display);
     mg_mgr_init(connection_manager);
     gpio_init(DHT22_PIN);
     gpio_set_function(BUZZER_PIN, GPIO_FUNC_PWM);

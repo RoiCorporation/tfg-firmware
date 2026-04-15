@@ -62,7 +62,8 @@ unsigned int analyze_hazards(ambient_info_t previous_readings[LENGTH_PREVIOUS_RE
             is_hydrogen_gas_worsening = false;
     }
 
-    // If any of the conditions are worsening, return that hazard code. Else, return 0.
+    // If any of the conditions are worsening or exceed the threshold,
+    // return that hazard code. Otherwise return 0.
     if (is_temp_rising || 
         previous_readings[0].temperature > TEMPERATURE_HAZARD_THRESHOLD ||
         previous_readings[1].temperature > TEMPERATURE_HAZARD_THRESHOLD ||

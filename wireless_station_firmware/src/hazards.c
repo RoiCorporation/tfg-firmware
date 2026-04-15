@@ -12,8 +12,8 @@
  * represents that particular hazard (a positive integer).
  */
 unsigned int analyze_hazards(ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY]) {
-    bool is_temp_rising = true, 
-        is_humidity_rising = true, 
+    bool is_temp_rising = true,
+        is_humidity_rising = true,
         is_air_quality_worsening = true;
 
     // Loop through the array and check if any of the ambient conditions is worsening.
@@ -32,9 +32,22 @@ unsigned int analyze_hazards(ambient_info_t previous_readings[LENGTH_PREVIOUS_RE
             is_air_quality_worsening = false;
     }
 
-    // If any of the conditions are worsening, return that hazard code. Else, return 0.
-    if (is_temp_rising) return TEMPERATURE_RISING_HAZARD;
+    // If any of the conditions are worsening or exceed the threshold,
+    // return that hazard code. Otherwise return 0.
+        if (is_temp_rising || 
+        previous_readings[0].temperature > TEMPERATURE_HAZARD_THRESHOLD ||
+        previous_readings[1].temperature > TEMPERATURE_HAZARD_THRESHOLD ||
+        previous_readings[2].temperature > TEMPERATURE_HAZARD_THRESHOLD ||
+        previous_readings[3].temperature > TEMPERATURE_HAZARD_THRESHOLD ||
+        previous_readings[4].temperature > TEMPERATURE_HAZARD_THRESHOLD
+    ) return TEMPERATURE_RISING_HAZARD;
     if (is_humidity_rising) return HUMIDITY_RISING_HAZARD;
-    if (is_air_quality_worsening) return AIR_QUALITY_WORSENING_HAZARD;
+    if (is_air_quality_worsening ||
+        previous_readings[0].air_quality_index > AIR_QUALITY_HAZARD_THRESHOLD ||
+        previous_readings[1].air_quality_index > AIR_QUALITY_HAZARD_THRESHOLD ||
+        previous_readings[2].air_quality_index > AIR_QUALITY_HAZARD_THRESHOLD ||
+        previous_readings[3].air_quality_index > AIR_QUALITY_HAZARD_THRESHOLD ||
+        previous_readings[4].air_quality_index > AIR_QUALITY_HAZARD_THRESHOLD
+    ) return AIR_QUALITY_WORSENING_HAZARD;
     return 0;
 }

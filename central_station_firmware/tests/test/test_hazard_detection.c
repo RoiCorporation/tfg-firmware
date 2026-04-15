@@ -11,8 +11,7 @@ void setUp(void) {}
 void tearDown(void) {}
 
 
-void test_analyze_hazards_continuously_incrementing_parameters(void)
-{
+void test_analyze_hazards_continuously_incrementing_parameters(void) {
     ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
 
     // Test with a list of previous readings that poses a hazard due to
@@ -162,8 +161,7 @@ void test_analyze_hazards_breaking_incrementing_parameter_series(void) {
 }
 
 
-void test_analyze_hazards_over_threshold_parameters(void)
-{
+void test_analyze_hazards_over_threshold_parameters(void) {
     ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
     create_correct_previous_readings_list(previous_readings);
 

@@ -106,7 +106,7 @@ void play_humidity_hazard_alarm(unsigned int slice, unsigned int channel) {
  * @param channel the PWM channel number for the buzzer pin.
  */
 void play_air_quality_index_hazard_alarm(unsigned int slice, unsigned int channel) {
-    unsigned int frequencies[3] = {NOTE_B4, NOTE_A5, NOTE_G5};
+    unsigned int frequencies[NUMBER_TONES_AIR_QUALITY_INDEX_HAZARD_ALARM] = {NOTE_B4, NOTE_A5, NOTE_G5};
     float clkdiv = 4.0f;
 
     for (int i = 0; i < NUMBER_ALARM_REPETITIONS; i++) {

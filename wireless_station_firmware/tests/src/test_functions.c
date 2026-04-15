@@ -29,7 +29,7 @@ void create_rising_temperature_hazard(ambient_info_t previous_readings[LENGTH_PR
   for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
     previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN);
     previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN - 0.05);
-    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
+    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (-52.6 - 0.05);
     previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN - 0.05);
   }
 }
@@ -46,7 +46,7 @@ void create_rising_humidity_hazard(ambient_info_t previous_readings[LENGTH_PREVI
   for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
     previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN);
-    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
+    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (-52.6 - 0.05);
     previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN - 0.05);
   }
 }
@@ -64,7 +64,7 @@ void create_worsening_air_quality_hazard(ambient_info_t previous_readings[LENGTH
   for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
     previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN - 0.05);
-    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
+    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (-52.6 - 0.05);
     previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN);
   }
 }
@@ -81,7 +81,7 @@ void create_correct_previous_readings_list(ambient_info_t previous_readings[LENG
   for (int i = 1; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
     previous_readings[i].temperature = previous_readings[i - 1].temperature + (TEMPERATURE_INCREASE_MARGIN - 0.05);
     previous_readings[i].humidity = previous_readings[i - 1].humidity + (HUMIDITY_INCREASE_MARGIN - 0.05);
-    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (PRESSURE_INCREASE_MARGIN - 0.05);
+    previous_readings[i].air_pressure = previous_readings[i - 1].air_pressure + (-52.6 - 0.05);
     previous_readings[i].air_quality_index = previous_readings[i - 1].air_quality_index + (AIR_QUALITY_WORSENING_MARGIN - 0.05);
   }
 }

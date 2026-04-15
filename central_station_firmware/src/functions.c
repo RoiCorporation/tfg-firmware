@@ -12,10 +12,15 @@
  * @brief Initialize the different station components, such as stdio, GPIO, I2C
  * and the sensors.
  * 
- * @param bme680_sensor struct that acts as an instance of the sensor.
- * @param bme680_conf struct for the sensor's configuration.
- * @param bme680_heater_conf struct for the configuration of the sensor's heater.
+ * @param bme680_sensor pointer to the struct that acts as an instance of the 
+ * BME680 sensor.
+ * @param bme680_conf pointer to the struct for the BME680 sensor's configuration.
+ * @param bme680_heater_conf pointer to the struct for the configuration of the 
+ * @param oled_display pointer to the OLED display driver.
+ * BME680 sensor's heater.
  * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param station_id_to_nrf24_address_buffer buffer that maps the associated
+ * wireless stations ID's with the NRF24L01 module data pipe addresses.
  * @param connection_manager pointer to the connection manager.
  * @param copi_pin SPI COPI microcontroller pin.
  * @param cipo_pin CIPO microcontroller pin.
@@ -25,12 +30,13 @@
  * @param spi_baudrate SPI baudrate (in Herz).
  */
 void initialize_station(
-    struct bme68x_dev* bme680_sensor,
-    struct bme68x_conf* bme680_conf,
-    struct bme68x_heatr_conf* bme680_heater_conf,
-    nrf_client_t* nrf24_module,
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf,
+    ssd1306_t *oled_display,
+    nrf_client_t *nrf24_module,
     station_id_address_map_t station_id_to_nrf24_address_buffer[],
-    struct mg_mgr* connection_manager,
+    struct mg_mgr *connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -41,7 +47,12 @@ void initialize_station(
     stdio_init_all();
     while (!stdio_usb_connected()) sleep_ms(10);
     initialize_i2c_bus();
+    sleep_ms(200);
     initialize_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf);
+    oled_display->external_vcc=false;
+    ssd1306_init(oled_display, 128, 64, OLED_DISPLAY_I2C_ADDRESS, i2c0);
+    sleep_ms(200);
+    ssd1306_clear(oled_display);
     initialize_station_id_to_address_buffer(
         station_id_to_nrf24_address_buffer,
         NRF24_ADDRESSES_BUFFER_SIZE,
@@ -85,9 +96,9 @@ void initialize_i2c_bus() {
  * @param bme680_heater_conf struct for the configuration of the sensor's heater.
  */
 void initialize_bme680_sensor(
-    struct bme68x_dev* bme680_sensor,
-    struct bme68x_conf* bme680_conf,
-    struct bme68x_heatr_conf* bme680_heater_conf
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf
 ) {
 
     uint32_t del_period;
@@ -125,7 +136,7 @@ void initialize_bme680_sensor(
  * @param spi_baudrate SPI baudrate (in Herz).
  */
 void initialize_nrf24_module(
-    nrf_client_t* nrf24_module,
+    nrf_client_t *nrf24_module,
     station_id_address_map_t station_id_to_nrf24_address_buffer[],
     uint8_t copi_pin,
     uint8_t cipo_pin,
@@ -263,7 +274,7 @@ int8_t handshake(
     // Set the nrf24 module to standby-I mode to prepare it to enter TX mode and
     // wait for a while to ensure it's entered TX mode.
     nrf24_module->standby_mode();
-    sleep_ms(30);
+    sleep_ms(300);
 
     // Copy the address of the corresponding data pipe to the packet array. 
     // This is the payload of the packet that the nrf24 module will send.

@@ -11,7 +11,7 @@ void mqtt_timer_fn(void *arg);
 int8_t mqtt_is_ready(network_ctx_t *network_context);
 void publish_environmental_readings(
     struct mg_connection *connection,
-    ambient_info_t station_readings
+    ambient_info_t *station_readings
 );
 
 

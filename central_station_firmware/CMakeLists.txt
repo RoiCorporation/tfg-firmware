@@ -43,6 +43,8 @@ add_executable(${PROJECT_NAME}
     src/bme680_port.c
     src/network.c
     src/utils.c
+    src/oled_display.c
+    lib/pico-ssd1306/ssd1306.c
 )
 
 pico_set_program_name(${PROJECT_NAME} "${PROJECT_NAME}")
@@ -82,6 +84,7 @@ target_include_directories(${PROJECT_NAME}
     ${CMAKE_CURRENT_LIST_DIR}/lib/pico-nrf24-driver/lib/nrf24l01/
     ${CMAKE_CURRENT_LIST_DIR}/lib/tiny-AES-c/
     ${CMAKE_CURRENT_LIST_DIR}/lib/mongoose/
+    ${CMAKE_CURRENT_LIST_DIR}/lib/pico-ssd1306/
 )
 
 # Get compile definitions from environmental variables 

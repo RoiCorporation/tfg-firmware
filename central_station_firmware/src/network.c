@@ -122,30 +122,30 @@ void mqtt_timer_fn(void *arg) {
  * @brief Create an MQTT protocol "Publish" operation and send the environmental
  * readings of a given station as the message's payload.
  * 
- * @param connection struct that acts as the MQTT connection manager.
- * @param station_readings struct containing the environmental data read by the
- * station.
+ * @param connection pointer to the struct that acts as the MQTT connection manager.
+ * @param station_readings pointer to struct containing the environmental data
+ * read by the station.
  */
 void publish_environmental_readings(
     struct mg_connection *connection,
-    ambient_info_t station_readings
+    ambient_info_t *station_readings
 ) {
     char payload[512];
 
     mg_snprintf(
         payload, sizeof(payload),
         "{\"station_id\":\"%s\", \"temperature\":%.2f, \"humidity\":%.2f, \"light_intensity\":%.2f, \"air_pressure\":%.2f, \"iaq\":%.2f, \"carbon_monoxide_concentration\":%.2f, \"methane_concentration\":%.2f, \"propane_concentration\":%.2f, \"alcohol_concentration\":%.2f, \"hydrogen_gas_concentration\":%.2f}", 
-        station_readings.station_id,
-        station_readings.temperature,
-        station_readings.humidity,
-        station_readings.light_intensity,
-        station_readings.air_pressure,
-        station_readings.air_quality_index,
-        station_readings.carbon_monoxide_concentration,
-        station_readings.methane_concentration,
-        station_readings.propane_concentration,
-        station_readings.alcohol_concentration,
-        station_readings.hydrogen_gas_concentration
+        station_readings->station_id,
+        station_readings->temperature,
+        station_readings->humidity,
+        station_readings->light_intensity,
+        station_readings->air_pressure,
+        station_readings->air_quality_index,
+        station_readings->carbon_monoxide_concentration,
+        station_readings->methane_concentration,
+        station_readings->propane_concentration,
+        station_readings->alcohol_concentration,
+        station_readings->hydrogen_gas_concentration
     );
 
     struct mg_mqtt_opts pub = {

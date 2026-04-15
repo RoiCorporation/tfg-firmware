@@ -1,6 +1,7 @@
 #!/bin/bash
 
 
+export STATION_ID="<Station ID that's engraved into the casing>"
 export WIFI_SSID="<WiFi network name>"
 export WIFI_PASSWORD="<WiFi network password>"
 export CYW43_HOST_NAME="Pico2W-Web"

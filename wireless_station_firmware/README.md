@@ -3,9 +3,18 @@
 
 
 ## 🚀 Load firmware into the Pico 2 W
-The process to load a program into the Pico 2 W board is straightforward,
-simply execute [this bash file](scripts/upload_wireless_station_firmware.sh)
-and the new version will be uploaded to the board.
+The process to load a program into the Pico 2 W board is straightforward.
+
+1. Edit and run [this script](scripts/set_secrets.example.sh) in the current
+shell using the ```source``` command:
+```
+source set_secrets.example.sh
+```
+This creates the environment variables needed for the station to identify
+itself when communicating with its host central station.
+
+2. From the same terminal, run [this bash file](scripts/upload_wireless_station_firmware.sh)
+as usual to upload the firmware to the board.
 
 
 

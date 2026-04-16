@@ -45,7 +45,6 @@ void initialize_station(
     uint32_t spi_baudrate
 ) {
     stdio_init_all();
-    while (!stdio_usb_connected()) sleep_ms(10);
     initialize_i2c_bus();
     sleep_ms(200);
     initialize_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf);
@@ -72,6 +71,10 @@ void initialize_station(
     gpio_set_function(BUZZER_PIN, GPIO_FUNC_PWM);
     unsigned int slice_num = pwm_gpio_to_slice_num(BUZZER_PIN);
     pwm_set_enabled(slice_num, false);
+
+    // Initialize the BH1750.
+    uint8_t cmd = BH1750_CONT_H_RES_MODE;
+    i2c_write_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, &cmd, 1, false);
 }
 
 

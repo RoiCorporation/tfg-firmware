@@ -63,19 +63,19 @@ int main() {
         CE_PIN,
         SPI_BAUDRATE
     );
-
-    while (!stdio_usb_connected()) sleep_ms(10);
-
-    // Initialize the BH1750.
-    uint8_t cmd = BH1750_CONT_H_RES_MODE;
-    i2c_write_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, &cmd, 1, false);
-    sleep_ms(180); // Wait for the first measurement.
+    sleep_ms(200);
 
     add_repeating_timer_ms(3000, display_reading_timer_callback, &display_turn, &timer);
+    ssd1306_draw_string(&oled_display, 0, 27, 2, "Connecting");
+    ssd1306_show(&oled_display);
 
     if (handshake(&nrf24_module) != 0) {
         printf("Error on the handshake when associating a wireless station. Error number %d\n",
             HANDSHAKE_ERROR);
+        ssd1306_draw_string(&oled_display, 0, 16, 1, "An error occurred");
+        ssd1306_draw_string(&oled_display, 0, 32, 1, "trying to connect to");
+        ssd1306_draw_string(&oled_display, 0, 48, 1, "a central station.");
+        ssd1306_show(&oled_display);
     }
 
     else {

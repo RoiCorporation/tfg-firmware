@@ -91,13 +91,13 @@ void core1_entry() {
                 station_readings.air_quality_index);
         }
 
-        // if (read_light_intensity(&station_readings) == -1) {
-        //     printf("Error when reading the light intensity sensor. Error number %d\n",
-        //         LIGHT_SENSOR_READ_ERROR);
-        // }
-        // else {
-        //     printf("Light intensity: %.2f\n", station_readings.light_intensity);
-        // }
+        if (read_light_intensity(&station_readings) == -1) {
+            printf("Error when reading the light intensity sensor. Error number %d\n",
+                LIGHT_SENSOR_READ_ERROR);
+        }
+        else {
+            printf("Light intensity: %.2f\n", station_readings.light_intensity);
+        }
 
         //TODO: change this when we find a way to actually calculate the correct AQI + gas concentrations.
         station_readings.air_quality_index = 0;
@@ -278,6 +278,7 @@ int main() {
         CE_PIN,
         SPI_BAUDRATE
     );
+    sleep_ms(200);
 
     for (int i = 0; i < NRF24_ADDRESSES_BUFFER_SIZE; i++) {
         printf("%d-th address: ", i);
@@ -290,10 +291,10 @@ int main() {
     ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
     ssd1306_show(&oled_display);
 
-    mg_timer_add(&connection_manager, 3000, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
+    mg_timer_add(&connection_manager, 200, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
 
     while (mqtt_is_ready(&network_context) != 0) {
-        mg_mgr_poll(&connection_manager, 1000);
+        mg_mgr_poll(&connection_manager, 200);
     }
 
     queue_init(&call_queue, sizeof(queue_entry_t), 1);
@@ -369,8 +370,6 @@ int main() {
                 }
             }
             printf("\n");
-
-            // mg_mgr_poll(&connection_manager, 1000);
             sleep_ms(1000);
         }
     }

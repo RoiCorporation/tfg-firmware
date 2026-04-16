@@ -78,7 +78,7 @@ int main() {
             HANDSHAKE_ERROR);
     }
 
-    if (1 == 1) {
+    else {
 
         while (1) {
 
@@ -89,15 +89,6 @@ int main() {
             station_readings.light_intensity = 0;
             station_readings.air_pressure = 0;
             station_readings.air_quality_index = 0;
-
-            if (read_temperature_and_humidity(&station_readings) == -1) {
-                printf("Error when reading the temperature and humidity sensor. Error number %d\n",
-                    BME680_READ_ERROR);
-            }
-            else {
-                printf("DHT22 readings: Temperature %.1fC, Humidity %.1f%%\n",
-                    station_readings.temperature, station_readings.humidity);
-            }
 
             if (read_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf, &station_readings) == -1) {
                 printf("Error when reading the BME680 sensor measurements. Error number %d\n",

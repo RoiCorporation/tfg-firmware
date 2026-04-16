@@ -76,15 +76,6 @@ void core1_entry() {
         station_readings.alcohol_concentration = 0;
         station_readings.hydrogen_gas_concentration = 0;
 
-        // if (read_temperature_and_humidity(&station_readings) == -1) {
-        //     printf("Error when reading the temperature and humidity sensor. Error number %d\n",
-        //         BME680_READ_ERROR);
-        // }
-        // else {
-        //     printf("DHT22 readings: Temperature %.1fC, Humidity %.1f%%\n",
-        //            station_readings.temperature, station_readings.humidity);
-        // }
-
         if (read_bme680_sensor(
             call_queue_entry.bme680_sensor,
             call_queue_entry.bme680_conf,

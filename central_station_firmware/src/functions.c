@@ -69,7 +69,6 @@ void initialize_station(
         spi_baudrate
     );
     mg_mgr_init(connection_manager);
-    gpio_init(DHT22_PIN);
     gpio_set_function(BUZZER_PIN, GPIO_FUNC_PWM);
     unsigned int slice_num = pwm_gpio_to_slice_num(BUZZER_PIN);
     pwm_set_enabled(slice_num, false);
@@ -330,64 +329,6 @@ int8_t read_bme680_sensor(
         reading->air_quality_index = sensor_data_read.gas_resistance;
         return (int8_t)0;
     }
-    return (int8_t)-1;
-}
-
-
-/**
- * @brief Read temperature and humidity from the DHT22 sensor.
- * 
- * @param reading pointer to an ambient_info_t struct where the read values 
- * will be stored.
- * @return int8_t 0 if the reading was successful, -1 otherwise.
- */
-int8_t read_temperature_and_humidity(ambient_info_t *reading) {
-    int data[5] = {0, 0, 0, 0, 0};
-    uint j = 0;
-    uint last = 1;
-
-    // Send start signal.
-    gpio_set_dir(DHT22_PIN, GPIO_OUT);
-    gpio_put(DHT22_PIN, 0);
-    sleep_ms(20);
-    gpio_set_dir(DHT22_PIN, GPIO_IN);
-
-    for (uint i = 0; i < MAX_TIMINGS; i++) {
-        // Measure pulse length in µs,
-        uint32_t start_time = time_us_32();
-        while (gpio_get(DHT22_PIN) == last) {
-            if ((time_us_32() - start_time) > 1000) break; // 1 ms timeout,
-        }
-        uint32_t pulse_length = time_us_32() - start_time;
-        last = gpio_get(DHT22_PIN);
-
-        if (pulse_length > 1000) break; // Sensor stopped responding.
-
-        // Starting from bit 0 after ~4 transitions.
-        if ((i >= 4) && (i % 2 == 0)) {
-            data[j / 8] <<= 1;
-            if (pulse_length > 35) data[j / 8] |= 1;  // >35 µs = 1, else 0.
-            j++;
-        }
-    }
-
-    // Verify checksum. If successful, return 0, else return -1.
-    if ((j >= 40) &&
-        (data[4] == ((data[0] + data[1] + data[2] + data[3]) & 0xFF))) {
-
-        reading->humidity = (float) ((data[0] << 8) + data[1]) / 10;
-        if (reading->humidity > 100) reading->humidity = data[0]; // DHT11 fallback.
-
-        reading->temperature = (float) (((data[2] & 0x7F) << 8) + data[3]) / 10;
-        if (reading->temperature > 125) reading->temperature = data[2];
-
-        if (data[2] & 0x80) reading->temperature = -reading->temperature; // Negative temp.
-
-        return (int8_t)0;
-    }
-
-    reading->temperature = NAN;
-    reading->humidity = NAN;
     return (int8_t)-1;
 }
 

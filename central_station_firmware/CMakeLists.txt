@@ -62,14 +62,14 @@ target_link_libraries(${PROJECT_NAME}
     hardware_pio
     hardware_pwm
     pico_rand
-    hardware_flash
     pico_bootrom
+    pico_mbedtls
+    pico_multicore
+    hardware_flash
     BME68x_SensorAPI
     nrf24_driver
     tiny-aes
     mongoose
-    pico_mbedtls
-    pico_multicore
 )
 
 add_library(BME68x_SensorAPI STATIC

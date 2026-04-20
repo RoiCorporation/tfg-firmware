@@ -17,6 +17,31 @@
 
 
 queue_t call_queue;
+button_action_t button_action = NO_ACTION;
+absolute_time_t time_button_press, time_button_release;
+
+
+void button_callback(uint gpio, uint32_t events) {
+
+    if (events & GPIO_IRQ_EDGE_RISE) {
+        time_button_press = get_absolute_time();
+        printf("Touched, time: %u ms\n", to_ms_since_boot(time_button_press));
+    }
+    else if (events & GPIO_IRQ_EDGE_FALL) {
+        button_action = TURN_ON_DISPLAY;
+        time_button_release = get_absolute_time();
+        uint32_t elapsed_time_ms = (
+            to_ms_since_boot(time_button_release) -
+            to_ms_since_boot(time_button_press)
+        );
+
+        if (elapsed_time_ms >= BUTTON_PRESS_DELAY_FOR_HANDSHAKE_MS)
+            button_action = START_HANDSHAKE;
+        printf("Elapsed time: %u ms\n", elapsed_time_ms);
+    }
+    printf("\n");
+}
+
 
 bool display_reading_timer_callback(__unused struct repeating_timer *t) {
     uint8_t *display_turn = (uint8_t *)t->user_data;
@@ -312,66 +337,70 @@ int main() {
     // and uploading them to the database.
     multicore_launch_core1(core1_entry);
     queue_add_blocking(&call_queue, &call_queue_entry);
-
-    // Check for incoming connections from wireless stations.
-    int8_t handshake_result = handshake(
-        &nrf24_module,
-        station_id_to_nrf24_address_buffer,
-        NRF24_ADDRESSES_BUFFER_SIZE
-    );
-    if (handshake_result != 0) {
-        printf("Error on the handshake when associating a wireless station. Error number %d\n",
-            HANDSHAKE_ERROR);
-    }
     
-    else {
+    while (1) {
 
-        while (1) {
+        // Check for incoming connections from wireless stations.
+        if (button_action == START_HANDSHAKE) {
+            button_action = NO_ACTION;
 
-            if (receive_radio_message(
-                nrf24_module,
-                radio_message,
-                &incoming_packet_data_pipe
-            ) == -1) {
-                printf("Error when receiving a wireless station readings. Error number %d\n", 
-                    DATA_RECEIVE_ERROR);
+            // Start the handshake procedure.
+            int8_t handshake_result = handshake(
+                &nrf24_module,
+                station_id_to_nrf24_address_buffer,
+                NRF24_ADDRESSES_BUFFER_SIZE
+            );
+
+            // If the handshake procedure failed, print an appropriate error message.
+            if (handshake_result != 0) {
+                printf("Error on the handshake when associating a wireless station. Error number %d\n",
+                    HANDSHAKE_ERROR);
             }
-            else {
-                wireless_station_readings_buffer[incoming_packet_data_pipe].temperature = NAN;
-                wireless_station_readings_buffer[incoming_packet_data_pipe].humidity = NAN;
-                wireless_station_readings_buffer[incoming_packet_data_pipe].light_intensity = NAN;
-                wireless_station_readings_buffer[incoming_packet_data_pipe].air_pressure = NAN;
-                wireless_station_readings_buffer[incoming_packet_data_pipe].air_quality_index = NAN;
-
-                decrypt_ambient_info_message(
-                    &(wireless_station_readings_buffer[incoming_packet_data_pipe]),
-                    aes_ctx, AES_256_KEY, AES_256_IV, radio_message
-                );
-
-                memcpy(
-                    wireless_station_readings_buffer[incoming_packet_data_pipe].station_id,
-                    station_id_to_nrf24_address_buffer[incoming_packet_data_pipe].associated_station_id,
-                    STATION_ID_CHAR_LENGTH
-                );
-                wireless_station_readings_buffer[
-                    incoming_packet_data_pipe].station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
-
-                printf("Temperature: %f; Humidity: %f; ID: %s\n",
-                    wireless_station_readings_buffer[incoming_packet_data_pipe].temperature,
-                    wireless_station_readings_buffer[incoming_packet_data_pipe].humidity,
-                    wireless_station_readings_buffer[incoming_packet_data_pipe].station_id
-                );
-
-                if (mqtt_is_ready(&network_context) == 0) {
-                    publish_environmental_readings(
-                        network_context.mqtt_connection,
-                        &wireless_station_readings_buffer[incoming_packet_data_pipe]
-                    );
-                }
-            }
-            printf("\n");
-            sleep_ms(1000);
         }
+
+        if (receive_radio_message(
+            nrf24_module,
+            radio_message,
+            &incoming_packet_data_pipe
+        ) == -1) {
+            printf("Error when receiving a wireless station readings. Error number %d\n", 
+                DATA_RECEIVE_ERROR);
+        }
+        else {
+            wireless_station_readings_buffer[incoming_packet_data_pipe].temperature = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].humidity = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].light_intensity = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].air_pressure = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].air_quality_index = NAN;
+
+            decrypt_ambient_info_message(
+                &(wireless_station_readings_buffer[incoming_packet_data_pipe]),
+                aes_ctx, AES_256_KEY, AES_256_IV, radio_message
+            );
+
+            memcpy(
+                wireless_station_readings_buffer[incoming_packet_data_pipe].station_id,
+                station_id_to_nrf24_address_buffer[incoming_packet_data_pipe].associated_station_id,
+                STATION_ID_CHAR_LENGTH
+            );
+            wireless_station_readings_buffer[
+                incoming_packet_data_pipe].station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
+
+            printf("Temperature: %f; Humidity: %f; ID: %s\n",
+                wireless_station_readings_buffer[incoming_packet_data_pipe].temperature,
+                wireless_station_readings_buffer[incoming_packet_data_pipe].humidity,
+                wireless_station_readings_buffer[incoming_packet_data_pipe].station_id
+            );
+
+            // if (mqtt_is_ready(&network_context) == 0) {
+            //     publish_environmental_readings(
+            //         network_context.mqtt_connection,
+            //         &wireless_station_readings_buffer[incoming_packet_data_pipe]
+            //     );
+            // }
+        }
+        printf("\n");
+        sleep_ms(1000);
     }
 
     mg_mgr_free(&connection_manager);

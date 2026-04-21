@@ -11,6 +11,7 @@
 #include "ssd1306.h"
 #include "oled_display.h"
 #include "central_station_firmware.h"
+#include "callbacks.h"
 #include "hazards.h"
 #include "alerts.h"
 #include "errors.h"
@@ -20,38 +21,6 @@ queue_t call_queue;
 button_action_t button_action = NO_ACTION;
 absolute_time_t time_button_press, time_button_release;
 
-
-void button_callback(uint gpio, uint32_t events) {
-
-    if (events & GPIO_IRQ_EDGE_RISE) {
-        time_button_press = get_absolute_time();
-        printf("Touched, time: %u ms\n", to_ms_since_boot(time_button_press));
-    }
-    else if (events & GPIO_IRQ_EDGE_FALL) {
-        button_action = TURN_ON_DISPLAY;
-        time_button_release = get_absolute_time();
-        uint32_t elapsed_time_ms = (
-            to_ms_since_boot(time_button_release) -
-            to_ms_since_boot(time_button_press)
-        );
-
-        if (elapsed_time_ms >= BUTTON_PRESS_DELAY_FOR_HANDSHAKE_MS)
-            button_action = START_HANDSHAKE;
-        printf("Elapsed time: %u ms\n", elapsed_time_ms);
-    }
-    printf("\n");
-}
-
-
-bool display_turn_timer_callback(__unused struct repeating_timer *t) {
-    display_timer_ctx_t *display_timer_ctx = (display_timer_ctx_t *)t->user_data;
-    if (display_timer_ctx->display_turn == AMBIENT_INFO_FIELD_COUNT)
-        display_timer_ctx->display_turn = 0;
-    else
-        (display_timer_ctx->display_turn)++;
-    display_timer_ctx->turns_until_display_off--;
-    return true;
-}
 
 void core1_entry() {
     
@@ -98,15 +67,17 @@ void core1_entry() {
 
         if (button_action == TURN_ON_DISPLAY) {
             button_action = NO_ACTION;
-            display_timer_ctx.display_turn = 1;
-            display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
-            ssd1306_poweron(call_queue_entry.oled_display);
-            add_repeating_timer_ms(
-                3000,
-                display_turn_timer_callback,
-                &display_timer_ctx,
-                &display_turn_change_timer
-            );
+            if (display_timer_ctx.turns_until_display_off <= 0) {
+                display_timer_ctx.display_turn = 1;
+                display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
+                ssd1306_poweron(call_queue_entry.oled_display);
+                add_repeating_timer_ms(
+                    3000,
+                    display_turn_timer_callback,
+                    &display_timer_ctx,
+                    &display_turn_change_timer
+                );
+            }
         }
 
         // Initialize the values inside the station readings struct.

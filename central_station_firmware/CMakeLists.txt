@@ -38,6 +38,7 @@ pico_sdk_init()
 add_executable(${PROJECT_NAME}
     src/central_station_firmware.c 
     src/functions.c
+    src/callbacks.c
     src/hazards.c
     src/alerts.c
     src/bme680_port.c

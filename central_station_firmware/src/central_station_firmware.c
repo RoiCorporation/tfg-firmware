@@ -386,7 +386,7 @@ int main() {
             wireless_station_readings_buffer[
                 incoming_packet_data_pipe].station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
 
-            printf("WIRELESS: Temperature: %f; Humidity: %f; ID: %s\n",
+            printf("Temperature: %f; Humidity: %f; ID: %s\n",
                 wireless_station_readings_buffer[incoming_packet_data_pipe].temperature,
                 wireless_station_readings_buffer[incoming_packet_data_pipe].humidity,
                 wireless_station_readings_buffer[incoming_packet_data_pipe].station_id

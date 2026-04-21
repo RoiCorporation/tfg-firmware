@@ -36,12 +36,13 @@ void button_callback(uint gpio, uint32_t events) {
 }
 
 
-bool display_reading_timer_callback(__unused struct repeating_timer *t) {
-    uint8_t *display_turn = (uint8_t *)t->user_data;
-    if (*display_turn == 4)
-        *display_turn = 0;
+bool display_turn_timer_callback(__unused struct repeating_timer *t) {
+    display_timer_ctx_t *display_timer_ctx = (display_timer_ctx_t *)t->user_data;
+    if (display_timer_ctx->display_turn == AMBIENT_INFO_FIELD_COUNT)
+        display_timer_ctx->display_turn = 0;
     else
-        (*display_turn)++;
+        (display_timer_ctx->display_turn)++;
+    display_timer_ctx->turns_until_display_off--;
     return true;
 }
 
@@ -71,9 +72,13 @@ int main() {
     // AES encryption engine context.
     struct AES_ctx aes_ctx;
 
-    struct repeating_timer timer;
-    uint8_t display_turn = 0;
     uint8_t radio_message[sizeof(ambient_info_t)];
+
+    struct repeating_timer display_turn_change_timer;
+    display_timer_ctx_t display_timer_ctx = {
+        .display_turn = 1,
+        .turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT
+    };
 
     // Configure all the protocols, devices and pins in the station.
     initialize_station(
@@ -91,10 +96,29 @@ int main() {
     );
     sleep_ms(200);
 
-    add_repeating_timer_ms(3000, display_reading_timer_callback, &display_turn, &timer);
+    add_repeating_timer_ms(
+        3000,
+        display_turn_timer_callback,
+        &display_timer_ctx,
+        &display_turn_change_timer
+    );
 
     while (1) {
+
         tight_loop_contents();
+
+        if (button_action == TURN_ON_DISPLAY) {
+            button_action = NO_ACTION;
+            display_timer_ctx.display_turn = 1;
+            display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
+            ssd1306_poweron(&oled_display);
+            add_repeating_timer_ms(
+                3000,
+                display_turn_timer_callback,
+                &display_timer_ctx,
+                &display_turn_change_timer
+            );
+        }
 
         // Check if station should start the handshake procedure to associate
         // itself to a central station.
@@ -156,39 +180,47 @@ int main() {
             activate_hazard_alert(hazard_code);
         }
 
-        switch(display_turn) {
-            case 0:
-                display_temperature(
-                    &oled_display,
-                    station_readings.temperature
-                );
-                break;
-            case 1:
-                display_humidity(
-                    &oled_display,
-                    station_readings.humidity
-                );
-                break;
-            case 2:
-                display_light_intensity(
-                    &oled_display,
-                    station_readings.light_intensity
-                );
-                break;
-            case 3:
-                display_air_pressure(
-                    &oled_display,
-                    station_readings.air_pressure
-                );
-                break;
-            case 4:
-                display_air_quality_index(
-                    &oled_display,
-                    station_readings.air_quality_index
-                );
-                break;
-            default:
-                break;
+        if (display_timer_ctx.turns_until_display_off > 0) {
+            switch(display_timer_ctx.display_turn) {
+                case 1:
+                    display_temperature(
+                        &oled_display,
+                        station_readings.temperature
+                    );
+                    break;
+                case 2:
+                    display_humidity(
+                        &oled_display,
+                        station_readings.humidity
+                    );
+                    break;
+                case 3:
+                    display_light_intensity(
+                        &oled_display,
+                        station_readings.light_intensity
+                    );
+                    break;
+                case 4:
+                    display_air_pressure(
+                        &oled_display,
+                        station_readings.air_pressure
+                    );
+                    break;
+                case 5:
+                    display_air_quality_index(
+                        &oled_display,
+                        station_readings.air_quality_index
+                    );
+                    break;
+                default:
+                    break;
+            }
+        }
+        else if (display_timer_ctx.turns_until_display_off == 0) {
+            cancel_repeating_timer(&display_turn_change_timer);
+            ssd1306_clear(&oled_display);
+            ssd1306_show(&oled_display);
+            ssd1306_poweroff(&oled_display);
         }
 
         encrypt_ambient_info_message(

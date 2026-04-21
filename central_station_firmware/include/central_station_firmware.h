@@ -100,6 +100,11 @@ typedef struct {
     char *associated_station_id;
 } station_id_address_map_t;
 
+typedef struct {
+    uint8_t display_turn;
+    uint8_t turns_until_display_off;
+} display_timer_ctx_t;
+
 #ifndef TEST
 typedef struct {
     struct bme68x_dev bme680_sensor;

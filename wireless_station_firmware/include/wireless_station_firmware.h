@@ -70,6 +70,11 @@ typedef struct {
     float air_quality_index;
 } ambient_info_t;
 
+typedef struct {
+    uint8_t display_turn;
+    uint8_t turns_until_display_off;
+} display_timer_ctx_t;
+
 
 /* FUNCTION DECLARATIONS */
 // Declarations for setup functions.

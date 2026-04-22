@@ -12,7 +12,7 @@
 
 
 /* CONSTANTS*/
-#define AMBIENT_INFO_FIELD_COUNT (sizeof(ambient_info_t) - STATION_ID_CHAR_LENGTH) / sizeof(float)
+#define AMBIENT_INFO_FIELD_COUNT (sizeof(ambient_info_t) - STATION_ID_CHAR_LENGTH - 3) / sizeof(float)
 #define STATION_ID_BYTES_LENGTH 16
 #define STATION_ID_CHAR_LENGTH 37
 #define NRF24_ADDRESS_SIZE 5

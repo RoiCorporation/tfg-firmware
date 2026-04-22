@@ -3,7 +3,6 @@
 #include "callbacks.h"
 
 
-
 /**
  * @brief Handle the button press and release actions, updating the state
  * variable in charge of deciding which action the station must do next,
@@ -13,10 +12,8 @@
  * @param events which type of event triggered the callback.
  */
 void button_callback(uint gpio, uint32_t events) {
-
     if (events & GPIO_IRQ_EDGE_RISE) {
         time_button_press = get_absolute_time();
-        printf("Touched, time: %u ms\n", to_ms_since_boot(time_button_press));
     }
     else if (events & GPIO_IRQ_EDGE_FALL) {
         button_action = TURN_ON_DISPLAY;
@@ -28,9 +25,7 @@ void button_callback(uint gpio, uint32_t events) {
 
         if (elapsed_time_ms >= BUTTON_PRESS_DELAY_FOR_HANDSHAKE_MS)
             button_action = START_HANDSHAKE;
-        printf("Elapsed time: %u ms\n", elapsed_time_ms);
     }
-    printf("\n");
 }
 
 
@@ -46,9 +41,11 @@ void button_callback(uint gpio, uint32_t events) {
 bool display_turn_timer_callback(__unused struct repeating_timer *t) {
     display_timer_ctx_t *display_timer_ctx = (display_timer_ctx_t *)t->user_data;
     if (display_timer_ctx->display_turn == AMBIENT_INFO_FIELD_COUNT)
-        display_timer_ctx->display_turn = 0;
+        display_timer_ctx->display_turn = 1;
     else
         (display_timer_ctx->display_turn)++;
-    display_timer_ctx->turns_until_display_off--;
+
+    if (display_timer_ctx->turns_until_display_off > 0)
+        display_timer_ctx->turns_until_display_off--;
     return true;
 }

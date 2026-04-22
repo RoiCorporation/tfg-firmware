@@ -7,7 +7,6 @@
 #include "ssd1306.h"
 #include "nrf24_driver.h"
 #include "aes.h"
-#include <stdio.h>
 #endif
 
 

@@ -77,7 +77,7 @@ int main() {
 
         if (button_action == TURN_ON_DISPLAY) {
             button_action = NO_ACTION;
-            if (display_timer_ctx.turns_until_display_off <= 0) {
+            if (display_timer_ctx.turns_until_display_off == 0) {
                 display_timer_ctx.display_turn = 1;
                 display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
                 ssd1306_poweron(&oled_display);
@@ -186,7 +186,7 @@ int main() {
                     break;
             }
         }
-        else if (display_timer_ctx.turns_until_display_off == 0) {
+        else {
             cancel_repeating_timer(&display_turn_change_timer);
             ssd1306_clear(&oled_display);
             ssd1306_show(&oled_display);

@@ -15,6 +15,7 @@
 #define STATION_ID_BYTES_LENGTH 16
 #define NRF24_ADDRESS_SIZE 5
 #define HANDSHAKE_SEND_ID_ATTEMPTS 10
+#define TOUCH_BUTTON_PIN 7
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
 #define I2C_BAUDRATE 100000
@@ -22,6 +23,7 @@
 #define LIGHT_SENSOR_I2C_ADDRESS 0x23
 #define BH1750_CONT_H_RES_MODE 0x10
 #define BOARD_ADC_RESOLUTION 4096
+#define BUTTON_PRESS_DELAY_FOR_HANDSHAKE_MS 3000
 #define MINUTE_IN_MILLISECONDS 60000
 #define LENGTH_PREVIOUS_READINGS_ARRAY 5
 #define TEMPERATURE_INCREASE_MARGIN 1
@@ -52,6 +54,13 @@ static const uint8_t AES_256_IV[16] = {
     0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff 
 };
 
+/* ENUMS */
+typedef enum {
+    NO_ACTION,
+    TURN_ON_DISPLAY,
+    START_HANDSHAKE
+} button_action_t;
+
 /* STRUCTS */
 typedef struct {
     float temperature;
@@ -60,6 +69,11 @@ typedef struct {
     float air_pressure;
     float air_quality_index;
 } ambient_info_t;
+
+typedef struct {
+    uint8_t display_turn;
+    uint8_t turns_until_display_off;
+} display_timer_ctx_t;
 
 
 /* FUNCTION DECLARATIONS */
@@ -94,6 +108,7 @@ void initialize_nrf24_module(
     uint32_t spi_baudrate
 );
 int8_t handshake(nrf_client_t *nrf24_module);
+void button_callback(uint gpio, uint32_t events);
 
 // Declarations for functions related to sensor readings.
 int8_t read_bme680_sensor(

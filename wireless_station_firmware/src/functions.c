@@ -57,6 +57,16 @@ void initialize_station(
     // Initialize the BH1750.
     uint8_t cmd = BH1750_CONT_H_RES_MODE;
     i2c_write_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, &cmd, 1, false);
+
+    // Initialize the touch button.
+    gpio_init(TOUCH_BUTTON_PIN);
+    gpio_set_irq_enabled_with_callback(
+        TOUCH_BUTTON_PIN,
+        GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL,
+        true,
+        &button_callback
+    );
+
 }
 
 

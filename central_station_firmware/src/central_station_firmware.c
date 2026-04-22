@@ -11,21 +11,16 @@
 #include "ssd1306.h"
 #include "oled_display.h"
 #include "central_station_firmware.h"
+#include "callbacks.h"
 #include "hazards.h"
 #include "alerts.h"
 #include "errors.h"
 
 
 queue_t call_queue;
+button_action_t button_action = NO_ACTION;
+absolute_time_t time_button_press, time_button_release;
 
-bool display_reading_timer_callback(__unused struct repeating_timer *t) {
-    uint8_t *display_turn = (uint8_t *)t->user_data;
-    if (*display_turn == 9)
-        *display_turn = 0;
-    else
-        (*display_turn)++;
-    return true;
-}
 
 void core1_entry() {
     
@@ -53,14 +48,37 @@ void core1_entry() {
         previous_readings[i].hydrogen_gas_concentration = 0;
     }
     
-    struct repeating_timer timer;
-    uint8_t display_turn = 0;
+    struct repeating_timer display_turn_change_timer;
+    display_timer_ctx_t display_timer_ctx = {
+        .display_turn = 1,
+        .turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT
+    };
  
-    add_repeating_timer_ms(3000, display_reading_timer_callback, &display_turn, &timer);
+    add_repeating_timer_ms(
+        3000,
+        display_turn_timer_callback,
+        &display_timer_ctx,
+        &display_turn_change_timer
+    );
 
     while (1) {
 
         tight_loop_contents();
+
+        if (button_action == TURN_ON_DISPLAY) {
+            button_action = NO_ACTION;
+            if (display_timer_ctx.turns_until_display_off == 0) {
+                display_timer_ctx.display_turn = 1;
+                display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
+                ssd1306_poweron(call_queue_entry.oled_display);
+                add_repeating_timer_ms(
+                    3000,
+                    display_turn_timer_callback,
+                    &display_timer_ctx,
+                    &display_turn_change_timer
+                );
+            }
+        }
 
         // Initialize the values inside the station readings struct.
         memcpy(station_readings.station_id, STATION_ID, STATION_ID_CHAR_LENGTH);
@@ -124,69 +142,78 @@ void core1_entry() {
             activate_hazard_alert(hazard_code);
         }
 
-        switch(display_turn) {
-            case 0:
-                display_temperature(
-                    call_queue_entry.oled_display,
-                    station_readings.temperature
-                );
-                break;
-            case 1:
-                display_humidity(
-                    call_queue_entry.oled_display,
-                    station_readings.humidity
-                );
-                break;
-            case 2:
-                display_light_intensity(
-                    call_queue_entry.oled_display,
-                    station_readings.light_intensity
-                );
-                break;
-            case 3:
-                display_air_pressure(
-                    call_queue_entry.oled_display,
-                    station_readings.air_pressure
-                );
-                break;
-            case 4:
-                display_air_quality_index(
-                    call_queue_entry.oled_display,
-                    station_readings.air_quality_index
-                );
-                break;
-            case 5:
-                display_carbon_monoxide_concentration(
-                    call_queue_entry.oled_display,
-                    station_readings.carbon_monoxide_concentration
-                );
-                break;
-            case 6:
-                display_methane_concentration(
-                    call_queue_entry.oled_display,
-                    station_readings.methane_concentration
-                );
-                break;
-            case 7:
-                display_propane_concentration(
-                    call_queue_entry.oled_display,
-                    station_readings.propane_concentration
-                );
-                break;
-            case 8:
-                display_alcohol_concentration(
-                    call_queue_entry.oled_display,
-                    station_readings.alcohol_concentration
-                );
-                break;
-            case 9:
-                display_hydrogen_gas_concentration(
-                    call_queue_entry.oled_display,
-                    station_readings.hydrogen_gas_concentration
-                );
-                break;
-            default:
-                break;
+        if (display_timer_ctx.turns_until_display_off > 0) {
+
+            switch(display_timer_ctx.display_turn) {
+                case 1:
+                    display_temperature(
+                        call_queue_entry.oled_display,
+                        station_readings.temperature
+                    );
+                    break;
+                case 2:
+                    display_humidity(
+                        call_queue_entry.oled_display,
+                        station_readings.humidity
+                    );
+                    break;
+                case 3:
+                    display_light_intensity(
+                        call_queue_entry.oled_display,
+                        station_readings.light_intensity
+                    );
+                    break;
+                case 4:
+                    display_air_pressure(
+                        call_queue_entry.oled_display,
+                        station_readings.air_pressure
+                    );
+                    break;
+                case 5:
+                    display_air_quality_index(
+                        call_queue_entry.oled_display,
+                        station_readings.air_quality_index
+                    );
+                    break;
+                case 6:
+                    display_carbon_monoxide_concentration(
+                        call_queue_entry.oled_display,
+                        station_readings.carbon_monoxide_concentration
+                    );
+                    break;
+                case 7:
+                    display_methane_concentration(
+                        call_queue_entry.oled_display,
+                        station_readings.methane_concentration
+                    );
+                    break;
+                case 8:
+                    display_propane_concentration(
+                        call_queue_entry.oled_display,
+                        station_readings.propane_concentration
+                    );
+                    break;
+                case 9:
+                    display_alcohol_concentration(
+                        call_queue_entry.oled_display,
+                        station_readings.alcohol_concentration
+                    );
+                    break;
+                case 10:
+                    display_hydrogen_gas_concentration(
+                        call_queue_entry.oled_display,
+                        station_readings.hydrogen_gas_concentration
+                    );
+                    break;
+                default:
+                    break;
+            }
+        }
+        else {
+            cancel_repeating_timer(&display_turn_change_timer);
+            ssd1306_clear(call_queue_entry.oled_display);
+            ssd1306_show(call_queue_entry.oled_display);
+            ssd1306_poweroff(call_queue_entry.oled_display);
         }
         // Update the OLED display with the new readings.
 
@@ -312,66 +339,70 @@ int main() {
     // and uploading them to the database.
     multicore_launch_core1(core1_entry);
     queue_add_blocking(&call_queue, &call_queue_entry);
-
-    // Check for incoming connections from wireless stations.
-    int8_t handshake_result = handshake(
-        &nrf24_module,
-        station_id_to_nrf24_address_buffer,
-        NRF24_ADDRESSES_BUFFER_SIZE
-    );
-    if (handshake_result != 0) {
-        printf("Error on the handshake when associating a wireless station. Error number %d\n",
-            HANDSHAKE_ERROR);
-    }
     
-    else {
+    while (1) {
 
-        while (1) {
+        // Check for incoming connections from wireless stations.
+        if (button_action == START_HANDSHAKE) {
+            button_action = NO_ACTION;
 
-            if (receive_radio_message(
-                nrf24_module,
-                radio_message,
-                &incoming_packet_data_pipe
-            ) == -1) {
-                printf("Error when receiving a wireless station readings. Error number %d\n", 
-                    DATA_RECEIVE_ERROR);
+            // Start the handshake procedure.
+            int8_t handshake_result = handshake(
+                &nrf24_module,
+                station_id_to_nrf24_address_buffer,
+                NRF24_ADDRESSES_BUFFER_SIZE
+            );
+
+            // If the handshake procedure failed, print an appropriate error message.
+            if (handshake_result != 0) {
+                printf("Error on the handshake when associating a wireless station. Error number %d\n",
+                    HANDSHAKE_ERROR);
             }
-            else {
-                wireless_station_readings_buffer[incoming_packet_data_pipe].temperature = NAN;
-                wireless_station_readings_buffer[incoming_packet_data_pipe].humidity = NAN;
-                wireless_station_readings_buffer[incoming_packet_data_pipe].light_intensity = NAN;
-                wireless_station_readings_buffer[incoming_packet_data_pipe].air_pressure = NAN;
-                wireless_station_readings_buffer[incoming_packet_data_pipe].air_quality_index = NAN;
-
-                decrypt_ambient_info_message(
-                    &(wireless_station_readings_buffer[incoming_packet_data_pipe]),
-                    aes_ctx, AES_256_KEY, AES_256_IV, radio_message
-                );
-
-                memcpy(
-                    wireless_station_readings_buffer[incoming_packet_data_pipe].station_id,
-                    station_id_to_nrf24_address_buffer[incoming_packet_data_pipe].associated_station_id,
-                    STATION_ID_CHAR_LENGTH
-                );
-                wireless_station_readings_buffer[
-                    incoming_packet_data_pipe].station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
-
-                printf("Temperature: %f; Humidity: %f; ID: %s\n",
-                    wireless_station_readings_buffer[incoming_packet_data_pipe].temperature,
-                    wireless_station_readings_buffer[incoming_packet_data_pipe].humidity,
-                    wireless_station_readings_buffer[incoming_packet_data_pipe].station_id
-                );
-
-                if (mqtt_is_ready(&network_context) == 0) {
-                    publish_environmental_readings(
-                        network_context.mqtt_connection,
-                        &wireless_station_readings_buffer[incoming_packet_data_pipe]
-                    );
-                }
-            }
-            printf("\n");
-            sleep_ms(1000);
         }
+
+        if (receive_radio_message(
+            nrf24_module,
+            radio_message,
+            &incoming_packet_data_pipe
+        ) == -1) {
+            printf("Error when receiving a wireless station readings. Error number %d\n", 
+                DATA_RECEIVE_ERROR);
+        }
+        else {
+            wireless_station_readings_buffer[incoming_packet_data_pipe].temperature = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].humidity = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].light_intensity = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].air_pressure = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].air_quality_index = NAN;
+
+            decrypt_ambient_info_message(
+                &(wireless_station_readings_buffer[incoming_packet_data_pipe]),
+                aes_ctx, AES_256_KEY, AES_256_IV, radio_message
+            );
+
+            memcpy(
+                wireless_station_readings_buffer[incoming_packet_data_pipe].station_id,
+                station_id_to_nrf24_address_buffer[incoming_packet_data_pipe].associated_station_id,
+                STATION_ID_CHAR_LENGTH
+            );
+            wireless_station_readings_buffer[
+                incoming_packet_data_pipe].station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
+
+            printf("Temperature: %f; Humidity: %f; ID: %s\n",
+                wireless_station_readings_buffer[incoming_packet_data_pipe].temperature,
+                wireless_station_readings_buffer[incoming_packet_data_pipe].humidity,
+                wireless_station_readings_buffer[incoming_packet_data_pipe].station_id
+            );
+
+            if (mqtt_is_ready(&network_context) == 0) {
+                publish_environmental_readings(
+                    network_context.mqtt_connection,
+                    &wireless_station_readings_buffer[incoming_packet_data_pipe]
+                );
+            }
+        }
+        printf("\n");
+        sleep_ms(1000);
     }
 
     mg_mgr_free(&connection_manager);

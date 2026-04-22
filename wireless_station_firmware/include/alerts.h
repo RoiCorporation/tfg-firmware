@@ -17,21 +17,18 @@
 // Number of different tones in each hazard alarm.
 #define NUMBER_TONES_TEMPERATURE_HAZARD_ALARM 2
 #define NUMBER_TONES_HUMIDITY_HAZARD_ALARM 4
-#define NUMBER_TONES_PRESSURE_HAZARD_ALARM 2
-#define NUMBER_TONES_AIR_QUALITY_INDEX_HAZARD_ALARM 2
+#define NUMBER_TONES_AIR_QUALITY_INDEX_HAZARD_ALARM 3
 
 // Duration of each tone in the hazard alarms (in milliseconds).
 #define TEMPERATURE_HAZARD_ALARM_TONE_DURATION 600
 #define HUMIDITY_HAZARD_ALARM_TONE_DURATION 200
-#define PRESSURE_HAZARD_ALARM_TONE_DURATION 600
-#define AIR_QUALITY_INDEX_HAZARD_ALARM_TONE_DURATION 600
+#define AIR_QUALITY_INDEX_HAZARD_ALARM_TONE_DURATION 400
 
 
 // === Function declarations ===
 void activate_hazard_alert(unsigned int hazard_code);
 void play_temperature_hazard_alarm(unsigned int slice, unsigned int channel);
 void play_humidity_hazard_alarm(unsigned int slice, unsigned int channel);
-void play_air_pressure_hazard_alarm(unsigned int slice, unsigned int channel);
 void play_air_quality_index_hazard_alarm(unsigned int slice, unsigned int channel);
 
 

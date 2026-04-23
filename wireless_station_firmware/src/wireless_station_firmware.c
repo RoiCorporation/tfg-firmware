@@ -17,15 +17,6 @@ absolute_time_t time_button_press, time_button_release;
 
 int main() {
 
-    // Pointer to a ambient_info_t struct that stores all the data
-    // read by the sensors.
-    ambient_info_t station_readings;
-    
-    // Array of ambient_info_t elements that holds the n-previous
-    // sensor readings. It's used to check for potential upcoming 
-    // hazards, such as a flood, a sudden fire or a gas leak.
-    ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
-
     // BME680 sensor driver and its configuration and heater structures.
     struct bme68x_dev bme680_sensor;
     struct bme68x_conf bme680_conf;
@@ -41,6 +32,24 @@ int main() {
     struct AES_ctx aes_ctx;
 
     uint8_t radio_message[sizeof(ambient_info_t)];
+
+    // Pointer to a ambient_info_t struct that stores all the data
+    // read by the sensors.
+    ambient_info_t station_readings;
+    
+    // Array of ambient_info_t elements that holds the n-previous
+    // sensor readings. It's used to check for potential upcoming 
+    // hazards, such as a flood, a sudden fire or a gas leak.
+    ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
+
+    // Initialize the values in the array of previous measurements.
+    for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
+        previous_readings[i].temperature = 0;
+        previous_readings[i].humidity = 0;
+        previous_readings[i].light_intensity = 0;
+        previous_readings[i].air_pressure = 0;
+        previous_readings[i].air_quality_index = 0;
+    }
 
     struct repeating_timer display_turn_change_timer;
     display_timer_ctx_t display_timer_ctx = {

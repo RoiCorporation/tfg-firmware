@@ -225,6 +225,7 @@ int8_t handshake(
     data_pipe_t first_available_data_pipe = ALL_DATA_PIPES;
     uint8_t wireless_station_id_bytes[STATION_ID_BYTES_LENGTH];
     uint8_t packet_to_send[NRF24_ADDRESS_SIZE];
+    uint8_t aux_buffer[20];
     
     // Search the first available data pipe.
     for (int i = 0; i < buffer_size; i++) {
@@ -238,12 +239,22 @@ int8_t handshake(
         return (int8_t)-1;
 
     while (1) {
-        // If a packet is successfully read on the current available data pipe,
-        // store that packet as the wireless station id (still in bytes, not yet
-        // in string format). Then, configure that data pipe so that it only
-        // receives packets in that specific address.
+
+        // Check if any packets have been received.
         if (nrf24_module->is_packet(&data_pipe_read)) {
-            if (data_pipe_read == first_available_data_pipe) {
+
+            // If the address of the received packet corresponds to another
+            // data pipe, read it to force a flush of the RX FIFO and allow
+            // actual handshake-related packets to enter such FIFO.
+            if (data_pipe_read != first_available_data_pipe) {
+                nrf24_module->read_packet(aux_buffer, sizeof(aux_buffer));
+            }
+
+            // If a packet is successfully read on the current available data
+            // pipe, store that packet as the wireless station id (still in
+            // bytes, not yet in string format). Then, configure that data pipe
+            // so that it only receives packets in that specific address.
+            else {
                 if (nrf24_module->read_packet(
                     wireless_station_id_bytes, sizeof(wireless_station_id_bytes)) != ERROR) 
                 {
@@ -253,7 +264,7 @@ int8_t handshake(
                         nrf24_module->rx_destination(first_available_data_pipe, &station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address[NRF24_ADDRESS_SIZE - 1]);
                     data_pipe_t next_available_data_pipe = first_available_data_pipe + 1;
                     if (next_available_data_pipe < ALL_DATA_PIPES) {
-                        if (next_available_data_pipe < 2)
+                        if (next_available_data_pipe < DATA_PIPE_2)
                             nrf24_module->rx_destination(next_available_data_pipe, (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
                         else
                             nrf24_module->rx_destination(next_available_data_pipe, (uint8_t[]){0x00});

@@ -8,6 +8,7 @@
 extern button_action_t button_action;
 extern absolute_time_t time_button_press;
 extern absolute_time_t time_button_release;
+extern struct repeating_timer display_turn_change_timer;
 
 
 void button_callback(uint gpio, uint32_t events);

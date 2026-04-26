@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include "wireless_station_firmware.h"
 #include "callbacks.h"
+#include "oled_display.h"
 
 
 /**
@@ -30,9 +31,10 @@ void button_callback(uint gpio, uint32_t events) {
 
 
 /**
- * @brief Update the turn variables needed to control which environmental
- * measurement is shown in the OLED display and how many turns are left
- * before such display is set to sleep mode.
+ * @brief Update the OLED display with the environmental measurement that
+ * corresponds to the current turn. Also update the state variables needed
+ * to control both the turn system and the amount of turns before the display
+ * is put into sleep mode.
  * 
  * @param t pointer to a structure that stores the two state variables
  * related with the display turns.
@@ -40,6 +42,42 @@ void button_callback(uint gpio, uint32_t events) {
  */
 bool display_turn_timer_callback(__unused struct repeating_timer *t) {
     display_timer_ctx_t *display_timer_ctx = (display_timer_ctx_t *)t->user_data;
+
+    switch(display_timer_ctx->display_turn) {
+        case 1:
+            display_temperature(
+                display_timer_ctx->oled_display,
+                display_timer_ctx->station_readings->temperature
+            );
+            break;
+        case 2:
+            display_humidity(
+                display_timer_ctx->oled_display,
+                display_timer_ctx->station_readings->humidity
+            );
+            break;
+        case 3:
+            display_light_intensity(
+                display_timer_ctx->oled_display,
+                display_timer_ctx->station_readings->light_intensity
+            );
+            break;
+        case 4:
+            display_air_pressure(
+                display_timer_ctx->oled_display,
+                display_timer_ctx->station_readings->air_pressure
+            );
+            break;
+        case 5:
+            display_air_quality_index(
+                display_timer_ctx->oled_display,
+                display_timer_ctx->station_readings->air_quality_index
+            );
+            break;
+        default:
+            break;
+    }
+
     if (display_timer_ctx->display_turn == AMBIENT_INFO_FIELD_COUNT)
         display_timer_ctx->display_turn = 1;
     else
@@ -47,5 +85,12 @@ bool display_turn_timer_callback(__unused struct repeating_timer *t) {
 
     if (display_timer_ctx->turns_until_display_off > 0)
         display_timer_ctx->turns_until_display_off--;
+    else {
+        cancel_repeating_timer(&display_turn_change_timer);
+        ssd1306_clear(display_timer_ctx->oled_display);
+        ssd1306_show(display_timer_ctx->oled_display);
+        ssd1306_poweroff(display_timer_ctx->oled_display);
+    }
+
     return true;
 }

@@ -13,6 +13,7 @@
 
 button_action_t button_action = NO_ACTION;
 absolute_time_t time_button_press, time_button_release;
+struct repeating_timer display_turn_change_timer;
 
 
 int main() {
@@ -51,11 +52,6 @@ int main() {
         previous_readings[i].air_quality_index = 0;
     }
 
-    struct repeating_timer display_turn_change_timer;
-    display_timer_ctx_t display_timer_ctx = {
-        .display_turn = 1,
-        .turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT
-    };
 
     // Configure all the protocols, devices and pins in the station.
     initialize_station(
@@ -73,6 +69,13 @@ int main() {
     );
     sleep_ms(200);
 
+    display_timer_ctx_t display_timer_ctx = {
+        .display_turn = 1,
+        .turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT,
+        .oled_display = &oled_display,
+        .station_readings = &station_readings
+    };
+
     add_repeating_timer_ms(
         3000,
         display_turn_timer_callback,
@@ -89,6 +92,8 @@ int main() {
             if (display_timer_ctx.turns_until_display_off == 0) {
                 display_timer_ctx.display_turn = 1;
                 display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
+                display_timer_ctx.oled_display = &oled_display;
+                display_timer_ctx.station_readings = &station_readings;
                 ssd1306_poweron(&oled_display);
                 add_repeating_timer_ms(
                     3000,
@@ -159,49 +164,6 @@ int main() {
             activate_hazard_alert(hazard_code);
         }
 
-        if (display_timer_ctx.turns_until_display_off > 0) {
-            switch(display_timer_ctx.display_turn) {
-                case 1:
-                    display_temperature(
-                        &oled_display,
-                        station_readings.temperature
-                    );
-                    break;
-                case 2:
-                    display_humidity(
-                        &oled_display,
-                        station_readings.humidity
-                    );
-                    break;
-                case 3:
-                    display_light_intensity(
-                        &oled_display,
-                        station_readings.light_intensity
-                    );
-                    break;
-                case 4:
-                    display_air_pressure(
-                        &oled_display,
-                        station_readings.air_pressure
-                    );
-                    break;
-                case 5:
-                    display_air_quality_index(
-                        &oled_display,
-                        station_readings.air_quality_index
-                    );
-                    break;
-                default:
-                    break;
-            }
-        }
-        else {
-            cancel_repeating_timer(&display_turn_change_timer);
-            ssd1306_clear(&oled_display);
-            ssd1306_show(&oled_display);
-            ssd1306_poweroff(&oled_display);
-        }
-
         encrypt_ambient_info_message(
             station_readings, aes_ctx, AES_256_KEY, AES_256_IV, radio_message);
 
@@ -214,7 +176,7 @@ int main() {
         }
 
         // Wait another full minute before reading sensors again.
-        sleep_ms(1000); //sleep_ms(MINUTE_IN_MILLISECONDS)
+        sleep_ms(MINUTE_IN_MILLISECONDS);
     }
 
 }

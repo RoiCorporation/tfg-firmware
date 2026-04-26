@@ -70,12 +70,14 @@ typedef struct {
     float air_quality_index;
 } ambient_info_t;
 
+#ifndef TEST
 typedef struct {
     uint8_t display_turn;
     uint8_t turns_until_display_off;
     ssd1306_t *oled_display;
     ambient_info_t *station_readings;
 } display_timer_ctx_t;
+#endif
 
 
 /* FUNCTION DECLARATIONS */

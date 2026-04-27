@@ -3,12 +3,15 @@
 
 
 #include "pico/stdlib.h"
+#include "wireless_station_firmware.h"
 
 
-extern button_action_t button_action;
+/* GLOBAL VARIABLES */
 extern absolute_time_t time_button_press;
 extern absolute_time_t time_button_release;
 extern struct repeating_timer display_turn_change_timer;
+extern display_timer_ctx_t display_timer_ctx;
+extern button_ctx_t button_ctx;
 
 
 void button_callback(uint gpio, uint32_t events);

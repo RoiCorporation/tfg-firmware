@@ -10,7 +10,7 @@
 #endif
 
 
-/* CONSTANTS*/
+/* CONSTANTS */
 #define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
 #define STATION_ID_BYTES_LENGTH 16
 #define NRF24_ADDRESS_SIZE 5
@@ -54,13 +54,6 @@ static const uint8_t AES_256_IV[16] = {
     0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff 
 };
 
-/* ENUMS */
-typedef enum {
-    NO_ACTION,
-    TURN_ON_DISPLAY,
-    START_HANDSHAKE
-} button_action_t;
-
 /* STRUCTS */
 typedef struct {
     float temperature;
@@ -71,6 +64,11 @@ typedef struct {
 } ambient_info_t;
 
 #ifndef TEST
+typedef struct {
+    ssd1306_t *oled_display;
+    nrf_client_t *nrf24_module;
+} button_ctx_t;
+
 typedef struct {
     uint8_t display_turn;
     uint8_t turns_until_display_off;
@@ -84,11 +82,11 @@ typedef struct {
 // Declarations for setup functions.
 #ifndef TEST
 void initialize_station(
-    struct bme68x_dev* bme680_sensor,
-    struct bme68x_conf* bme680_conf,
-    struct bme68x_heatr_conf* bme680_heater_conf,
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf,
     ssd1306_t *oled_display,
-    nrf_client_t* nrf24_module,
+    nrf_client_t *nrf24_module,
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -98,12 +96,12 @@ void initialize_station(
 );
 void initialize_i2c_bus();
 void initialize_bme680_sensor(
-    struct bme68x_dev* bme680_sensor,
-    struct bme68x_conf* bme680_conf,
-    struct bme68x_heatr_conf* bme680_heater_conf
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf
 );
 void initialize_nrf24_module(
-    nrf_client_t* nrf24_module,
+    nrf_client_t *nrf24_module,
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,

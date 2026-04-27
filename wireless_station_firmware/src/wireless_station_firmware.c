@@ -11,9 +11,10 @@
 #include "errors.h"
 
 
-button_action_t button_action = NO_ACTION;
 absolute_time_t time_button_press, time_button_release;
 struct repeating_timer display_turn_change_timer;
+button_ctx_t button_ctx;
+display_timer_ctx_t display_timer_ctx;
 
 
 int main() {
@@ -52,7 +53,6 @@ int main() {
         previous_readings[i].air_quality_index = 0;
     }
 
-
     // Configure all the protocols, devices and pins in the station.
     initialize_station(
         &bme680_sensor,
@@ -69,62 +69,28 @@ int main() {
     );
     sleep_ms(200);
 
-    display_timer_ctx_t display_timer_ctx = {
+    display_timer_ctx = (display_timer_ctx_t){
         .display_turn = 1,
         .turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT,
         .oled_display = &oled_display,
         .station_readings = &station_readings
     };
 
+    button_ctx = (button_ctx_t){
+        .oled_display = &oled_display,
+        .nrf24_module = &nrf24_module
+    };
+
     add_repeating_timer_ms(
         3000,
         display_turn_timer_callback,
-        &display_timer_ctx,
+        NULL,
         &display_turn_change_timer
     );
 
     while (1) {
 
         tight_loop_contents();
-
-        if (button_action == TURN_ON_DISPLAY) {
-            button_action = NO_ACTION;
-            if (display_timer_ctx.turns_until_display_off == 0) {
-                display_timer_ctx.display_turn = 1;
-                display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
-                display_timer_ctx.oled_display = &oled_display;
-                display_timer_ctx.station_readings = &station_readings;
-                ssd1306_poweron(&oled_display);
-                add_repeating_timer_ms(
-                    3000,
-                    display_turn_timer_callback,
-                    &display_timer_ctx,
-                    &display_turn_change_timer
-                );
-            }
-        }
-
-        // Check if station should start the handshake procedure to associate
-        // itself to a central station.
-        if (button_action == START_HANDSHAKE) {
-            button_action = NO_ACTION;
-            printf("STARTING HANDSHAKE\n");
-            ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to station");
-            ssd1306_show(&oled_display);
-
-            // Start the handshake procedure.
-            int8_t handshake_result = handshake(&nrf24_module);
-
-            // If the handshake procedure failed, print an appropriate error message.
-            if (handshake_result != 0) {
-                printf("Error on the handshake when associating a wireless station. Error number %d\n",
-                    HANDSHAKE_ERROR);
-                ssd1306_draw_string(&oled_display, 0, 16, 1, "An error occurred");
-                ssd1306_draw_string(&oled_display, 0, 32, 1, "trying to connect to");
-                ssd1306_draw_string(&oled_display, 0, 48, 1, "a central station.");
-                ssd1306_show(&oled_display);
-            }
-        }
 
         station_readings.temperature = 0;
         station_readings.humidity = 0;

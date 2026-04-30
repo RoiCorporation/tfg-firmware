@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "utils.h"
+#include "monocypher.h"
 
 
 /**
@@ -20,6 +21,48 @@ int8_t hex_value(char c) {
         return (int8_t)(c - 'A' + 10);
 
     return (int8_t)-1;
+}
+
+
+void uint32_to_u8_be(uint32_t value, uint8_t array[]) {
+    array[0] = (uint8_t)((value >> 24) & 0xff);
+    array[1] = (uint8_t)((value >> 16) & 0xff);
+    array[2] = (uint8_t)((value >> 8)  & 0xff);
+    array[3] = (uint8_t)( value        & 0xff);
+}
+
+
+void kdf(
+    uint8_t *output_key,
+    size_t output_key_size,
+    uint8_t *shared_secret,
+    size_t shared_secret_size,
+    uint8_t *salt,
+    size_t salt_size
+){
+    // Info must be 8 bytes
+    uint8_t chacha_nonce[8] = {'I', '5', 'S', 'K', 'L', 'Y', '0', '8'};
+
+	// Extract.
+	uint8_t prk[32];
+	crypto_blake2b_keyed(
+        prk,
+        sizeof(prk),
+        salt,
+        sizeof(salt),
+        shared_secret,
+        shared_secret_size
+    );
+
+	// Expand.
+	crypto_chacha20_djb(
+        output_key,
+        NULL,
+        output_key_size,
+        prk,
+        chacha_nonce,
+        0
+    );
 }
 
 

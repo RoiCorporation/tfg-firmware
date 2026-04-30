@@ -215,22 +215,6 @@ void core1_entry() {
             ssd1306_show(call_queue_entry.oled_display);
             ssd1306_poweroff(call_queue_entry.oled_display);
         }
-        // Update the OLED display with the new readings.
-
-        // display_hydrogen_gas_concentration(call_queue_entry.oled_display, 512);
-        // sleep_ms(2000);
-        // display_hydrogen_gas_concentration(call_queue_entry.oled_display, 9177.123);
-        // sleep_ms(2000);
-        // display_hydrogen_gas_concentration(&oled_display, 8769);
-        // sleep_ms(3000);
-        // display_hydrogen_gas_concentration(&oled_display, 57252);
-        // sleep_ms(3000);
-        // display_hydrogen_gas_concentration(&oled_display, 10001.23);
-        // sleep_ms(3000);
-        // display_hydrogen_gas_concentration(&oled_display, 389);
-        // sleep_ms(3000);
-        // display_hydrogen_gas_concentration(&oled_display, 1333.528);
-        // sleep_ms(3000);
         
         if (mqtt_is_ready(&call_queue_entry.network_context) == 0) {
             publish_environmental_readings(
@@ -250,12 +234,18 @@ void core1_entry() {
 
 int main() {
 
-    // Data variables used throughout the program lifetime.
+    /* Variables */
     ambient_info_t station_readings, wireless_station_readings_buffer[NRF24_ADDRESSES_BUFFER_SIZE];
-    uint8_t incoming_packet_data_pipe;
     station_id_address_map_t station_id_to_nrf24_address_buffer[NRF24_ADDRESSES_BUFFER_SIZE];
+    uint8_t incoming_packet_data_pipe;
     uint8_t radio_message[sizeof(ambient_info_t)];
+
+    // ECDH and AES variables.
+    uint8_t ecdh_private_key[ECC_PRV_KEY_SIZE];
+    uint8_t ecdh_public_key[ECC_PUB_KEY_SIZE];
+    uint8_t aes_key[AES_KEY_SIZE];
     
+    /* Components and module drivers */
     // BME680 sensor driver and its configuration and heater structures.
     struct bme68x_dev bme680_sensor;
     struct bme68x_conf bme680_conf;
@@ -265,9 +255,9 @@ int main() {
     ssd1306_t oled_display;
 
     // NRF24L01 module driver.
-    nrf_client_t nrf24_module;    
+    nrf_client_t nrf24_module;
 
-    // AES decryption engine context.
+    // AES decryption engine.
     struct AES_ctx aes_ctx;
 
     // Network stack context and its associated structures.
@@ -297,6 +287,8 @@ int main() {
         &oled_display,
         &nrf24_module,
         station_id_to_nrf24_address_buffer,
+        ecdh_private_key,
+        ecdh_public_key,
         network_context.connection_manager,
         COPI_PIN,
         CIPO_PIN,
@@ -318,11 +310,11 @@ int main() {
     ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
     ssd1306_show(&oled_display);
 
-    mg_timer_add(&connection_manager, 200, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
+    // mg_timer_add(&connection_manager, 200, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
 
-    while (mqtt_is_ready(&network_context) != 0) {
-        mg_mgr_poll(&connection_manager, 200);
-    }
+    // while (mqtt_is_ready(&network_context) != 0) {
+    //     mg_mgr_poll(&connection_manager, 200);
+    // }
 
     queue_init(&call_queue, sizeof(queue_entry_t), 1);
     
@@ -334,11 +326,21 @@ int main() {
         .network_context = network_context
     };
 
+
+
+    printf("Generated public key: \n");
+    for (int i = 0; i < sizeof(ecdh_public_key); i++) {
+        printf("%x\t", ecdh_public_key[i]);
+        if (i % 8 == 0)
+            printf("\n");
+    }
+    printf("\n");
+
     // Launch the other core to start reading values with the sensors 
     // of this station, displaying their measurements on the OLED display
     // and uploading them to the database.
-    multicore_launch_core1(core1_entry);
-    queue_add_blocking(&call_queue, &call_queue_entry);
+    // multicore_launch_core1(core1_entry);
+    // queue_add_blocking(&call_queue, &call_queue_entry);
     
     while (1) {
 
@@ -349,6 +351,12 @@ int main() {
             // Start the handshake procedure.
             int8_t handshake_result = handshake(
                 &nrf24_module,
+                ecdh_private_key,
+                ecdh_public_key,
+                KDF_SALT,
+                &aes_ctx,
+                aes_key,
+                AES_256_IV,
                 station_id_to_nrf24_address_buffer,
                 NRF24_ADDRESSES_BUFFER_SIZE
             );
@@ -377,7 +385,7 @@ int main() {
 
             decrypt_ambient_info_message(
                 &(wireless_station_readings_buffer[incoming_packet_data_pipe]),
-                aes_ctx, AES_256_KEY, AES_256_IV, radio_message
+                &aes_ctx, aes_key, AES_256_IV, radio_message
             );
 
             memcpy(
@@ -394,12 +402,12 @@ int main() {
                 wireless_station_readings_buffer[incoming_packet_data_pipe].station_id
             );
 
-            if (mqtt_is_ready(&network_context) == 0) {
-                publish_environmental_readings(
-                    network_context.mqtt_connection,
-                    &wireless_station_readings_buffer[incoming_packet_data_pipe]
-                );
-            }
+            // if (mqtt_is_ready(&network_context) == 0) {
+            //     publish_environmental_readings(
+            //         network_context.mqtt_connection,
+            //         &wireless_station_readings_buffer[incoming_packet_data_pipe]
+            //     );
+            // }
         }
         printf("\n");
         sleep_ms(1000);

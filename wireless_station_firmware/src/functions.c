@@ -1,12 +1,15 @@
 #include <math.h>
 #include <string.h>
 #include "pico/stdlib.h"
+#include "pico/rand.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
 #include "bme680_port.h"
 #include "wireless_station_firmware.h"
 #include "utils.h"
+#include "ecdh.h"
 
+#include <stdio.h>
 
 /**
  * @brief Initialize the different station components, such as stdio, GPIO, I2C
@@ -19,6 +22,10 @@
  * BME680 sensor's heater.
  * @param oled_display pointer to the OLED display driver.
  * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param ecdh_private_key uint8_t array that will store the station's private key
+ * to generate an ECDH public key.
+ * @param ecdh_public_key uint8_t array that will store the station's ECDH public
+ * key to send in a handshake association attempt with another station.
  * @param copi_pin SPI COPI microcontroller pin.
  * @param cipo_pin CIPO microcontroller pin.
  * @param sck_pin SPI SCK microcontroller pin.
@@ -32,6 +39,8 @@ void initialize_station(
     struct bme68x_heatr_conf* bme680_heater_conf,
     ssd1306_t *oled_display,
     nrf_client_t* nrf24_module,
+    uint8_t ecdh_private_key[],
+    uint8_t ecdh_public_key[],
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -50,6 +59,13 @@ void initialize_station(
     initialize_nrf24_module(
         nrf24_module, copi_pin, cipo_pin, sck_pin, cs_pin, ce_pin, spi_baudrate
     );
+
+    // Generate an ECDH private key using random bytes. Then, use
+    // that private key to generate an ECDH public key.
+    for (int i = 0; i < ECC_PRV_KEY_SIZE; i++)
+        ecdh_private_key[i] = (uint8_t)get_rand_32();
+    ecdh_generate_keys(ecdh_public_key, ecdh_private_key);
+
     gpio_set_function(BUZZER_PIN, GPIO_FUNC_PWM);
     unsigned int slice_num = pwm_gpio_to_slice_num(BUZZER_PIN);
     pwm_set_enabled(slice_num, false);
@@ -66,7 +82,6 @@ void initialize_station(
         true,
         &button_callback
     );
-
 }
 
 
@@ -160,7 +175,7 @@ void initialize_nrf24_module(
         .dyn_payloads = DYNPD_ENABLE,   // Dynamic payloads enabled.
         .data_rate = RF_DR_250KBPS,     // 250 KB/s data rate.
         .power = RF_PWR_NEG_12DBM,      // -12dBm Tx output power.
-        .retr_count = ARC_2RT,          // 2 packet retransmissions.
+        .retr_count = ARC_15RT,          // 2 packet retransmissions.
         .retr_delay = ARD_500US         // 500μS retransmission delay.
     };
     
@@ -183,13 +198,181 @@ void initialize_nrf24_module(
  * a central station.
  * 
  * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param ecdh_private_key uint8_t array that stores the station's ECDH private
+ * key.
+ * @param ecdh_public_key uint8_t array that stores the station's ECDH public
+ * key that gets sent to the other station at the beginning of the handshake.
+ * @param kdf_salt uint8_t array containing the salt used in the KDF.
+ * @param aes_ctx pointer to the AES encryption module.
+ * @param aes_key uint8_t array that will store the AES encryption key after
+ * invoking the KDF.
+ * @param aes_iv uint8_t array containing the initialization vector with which
+ * to set up the AES encryption module.
  * @return int8_t 0 if the handshake was completed successfully, -1 otherwise.
  */
-int8_t handshake(nrf_client_t *nrf24_module) {
+int8_t handshake(
+    nrf_client_t *nrf24_module,
+    uint8_t ecdh_private_key[],
+    uint8_t ecdh_public_key[],
+    uint8_t kdf_salt[],
+    struct AES_ctx *aes_ctx,
+    uint8_t aes_key[],
+    uint8_t aes_iv[]
+) {
+
+    printf("ENTERED HANDSHAKE\n");
 
     // Variables used in the method.
-    uint8_t station_id_in_bytes[STATION_ID_BYTES_LENGTH];
-    uint8_t received_packet[NRF24_ADDRESS_SIZE];
+    uint8_t station_id_in_bytes[STATION_ID_BYTES_LENGTH] = {0x00};
+    uint8_t received_nrf24_address_packet[NRF24_ADDRESS_SIZE + AES_IV_COUNTER_SIZE] = {0x00};
+    uint8_t other_station_ecdh_public_key[ECC_PUB_KEY_SIZE] = {0x00};
+    uint8_t shared_secret[ECC_PUB_KEY_SIZE] = {0x00};
+    uint8_t aux_pub_key_first_half_buffer[ECC_PUB_KEY_SIZE / 2] = {0x00};
+    uint8_t aux_pub_key_second_half_buffer[ECC_PUB_KEY_SIZE / 2] = {0x00};
+    uint8_t final_nrf24_address[NRF24_ADDRESS_SIZE] = {0x00};
+
+    // Set the TX address to be the default handshake address that all
+    // central stations listen to.
+    if (nrf24_module->tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00}) == ERROR)
+        return (int8_t)-1;
+
+    // Time buffer to ensure the central station has had time to get ready
+    // for reading the packets.
+    sleep_ms(2000);
+  
+    /* --------------------------------------------------------------------- */
+    // Send the first half of this station's ECDH public key.
+
+    // Divide the public key in two halves.
+    memcpy(aux_pub_key_first_half_buffer, ecdh_public_key, ECC_PUB_KEY_SIZE / 2);
+    memcpy(aux_pub_key_second_half_buffer, ecdh_public_key + ECC_PUB_KEY_SIZE / 2, ECC_PUB_KEY_SIZE / 2);
+        
+    // Send the packet with the first half of the station's ECDH public key.
+    for (int i = 0; i < HANDSHAKE_RETRANSMISSIONS; i++) {
+        nrf24_module->send_packet(ecdh_public_key, ECC_PUB_KEY_SIZE / 2);
+        sleep_ms(5);
+    }
+
+    printf("REACHED 1\n");
+    /* --------------------------------------------------------------------- */
+    // Receive the first half of the central station's ECDH public key.
+
+    // Set to module RX Mode and wait for a while to ensure it's entered RX mode.
+    nrf24_module->receiver_mode();
+    sleep_ms(20);
+
+    // Read the packet.
+    while (1) {
+        if (nrf24_module->is_packet(NULL)) {
+
+            // If a packet is successfully read, save that packet as first half
+            // of the central station's ECDH public key.
+            if (nrf24_module->read_packet(
+                aux_pub_key_first_half_buffer,
+                sizeof(aux_pub_key_first_half_buffer)
+            ) != ERROR)
+                break;
+        }
+        sleep_ms(10);
+    }
+    printf("REACHED 2\n");
+    /* --------------------------------------------------------------------- */
+    // Send the second half of this station's ECDH public key.
+
+    // Set the nrf24 module to standby-I mode to prepare it to enter TX mode and
+    // wait for a while to ensure it's entered TX mode.
+    nrf24_module->standby_mode();
+    sleep_ms(30);
+        
+    // Send the packet with the second half of the station's ECDH public key.
+    for (int i = 0; i < HANDSHAKE_RETRANSMISSIONS; i++) {
+        nrf24_module->send_packet(ecdh_public_key + ECC_PUB_KEY_SIZE / 2, ECC_PUB_KEY_SIZE / 2);
+        sleep_ms(5);
+    }
+    printf("REACHED 3\n");
+    /* --------------------------------------------------------------------- */
+    // Receive the second half of the central station's ECDH public key.
+
+    // Set to module RX Mode and wait for a while to ensure it's entered RX mode.
+    nrf24_module->receiver_mode();
+    sleep_ms(20);
+
+    // Read the packet.
+    while (1) {
+        if (nrf24_module->is_packet(NULL)) {
+
+            // If a packet is successfully read, save that packet as second half
+            // of the other station's ECDH public key.
+            if (nrf24_module->read_packet(
+                aux_pub_key_second_half_buffer,
+                sizeof(aux_pub_key_second_half_buffer)
+            ) != ERROR)
+                break;
+        }
+        sleep_ms(10);
+    }
+    printf("BOTH HALVES SENT and received\n");
+
+    /* --------------------------------------------------------------------- */
+    
+    // Add both halves together and generate the shared secret.
+    memcpy(other_station_ecdh_public_key, aux_pub_key_first_half_buffer, ECC_PUB_KEY_SIZE / 2);
+    memcpy(other_station_ecdh_public_key + ECC_PUB_KEY_SIZE / 2, aux_pub_key_second_half_buffer, ECC_PUB_KEY_SIZE / 2);
+
+    printf("Read other's public key: \n");
+    for (int i = 0; i < sizeof(other_station_ecdh_public_key); i++) {
+        printf("%x\t", other_station_ecdh_public_key[i]);
+        if (i % 8 == 0)
+            printf("\n");
+    }
+    printf("\n");
+
+    // Calculate the shared secret using the station's ECDH private key and the
+    // public key from the other station.
+    if (ecdh_shared_secret(
+        ecdh_private_key,
+        other_station_ecdh_public_key,
+        shared_secret) == 0)
+        return (int8_t)-1;
+
+    printf("Shared secret: \n");
+    for (int i = 0; i < sizeof(shared_secret); i++) {
+        printf("%x\t", shared_secret[i]);
+        if (i % 8 == 0)
+            printf("\n");
+    }
+    printf("\n");
+
+    // Invoke the KDF procedure to generate the AES encryption key that will be
+    // used from here on to encrypt and/or decrypt radio packets.
+    kdf(
+        aes_key,
+        AES_KEY_SIZE,
+        shared_secret,
+        sizeof(shared_secret),
+        kdf_salt,
+        KDF_SALT_SIZE
+    );
+
+    printf("AES KEY: \n");
+    for (int i = 0; i < AES_KEY_SIZE; i++) {
+        printf("%x\t", aes_key[i]);
+        if (i % 8 == 0)
+            printf("\n");
+    }
+    printf("\n");
+
+
+    // Initialize the AES encryption module.
+    AES_init_ctx_iv(aes_ctx, aes_key, aes_iv);
+
+    /* --------------------------------------------------------------------- */
+    // Send the station's ID encrypted by using the AES encryption module.
+
+    // Set the nrf24 module to standby-I mode to prepare it to enter TX mode and
+    // wait for a while to ensure it's entered TX mode.
+    nrf24_module->standby_mode();
+    sleep_ms(300);
 
     // Convert the ID from string to an array of bytes.
     int station_id_bytes_length = hex_string_to_bytes(
@@ -198,38 +381,61 @@ int8_t handshake(nrf_client_t *nrf24_module) {
     if (station_id_bytes_length != STATION_ID_BYTES_LENGTH)
         return (int8_t)-1;
 
-    // Set the TX address to be the default handshake address that all
-    // central stations listen to.
-    if (nrf24_module->tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00}) == ERROR)
-        return (int8_t)-1;
+    // Encrypt the message using the AES encryption module set up above.
+    AES_CTR_xcrypt_buffer(aes_ctx, station_id_in_bytes, sizeof(station_id_in_bytes));
+
+    printf("REACHED 5\n");
 
     // Transmit this station's ID as an array of bytes.
-    int i = 0;
-    while (i < HANDSHAKE_SEND_ID_ATTEMPTS) {
+    for (int i = 0; i < HANDSHAKE_RETRANSMISSIONS; i++) {
         nrf24_module->send_packet(station_id_in_bytes, sizeof(station_id_in_bytes));
-        i++;
         sleep_ms(15);
     }
 
     /* --------------------------------------------------------------------- */
-    // Now the central station will send this station the new address to which
-    // it must send its readings going forward.
+    // Receive the new NRF24L01 address to which this station must send its
+    // readings going forward.
 
     // Set to module RX Mode and wait for a while to ensure it's entered RX mode.
     nrf24_module->receiver_mode();
     sleep_ms(30);
 
+    uint8_t aux[32];
+    nrf24_module->read_packet(
+        aux,
+        sizeof(aux));
     // Read the packet.
     while (1) {
         if (nrf24_module->is_packet(NULL)) {
-            if (nrf24_module->read_packet(received_packet, sizeof(received_packet)) != ERROR)
+            if (nrf24_module->read_packet(
+                received_nrf24_address_packet,
+                sizeof(received_nrf24_address_packet)
+            ) != ERROR)
                 break;
         }
-        sleep_ms(30);
+        sleep_ms(20);
     }
+    printf("REACHED 6\n");
+
+    // Decrypt the message containing the final NRF24 destination address
+    // using the AES encryption module set up above.
+    decrypt_nrf24_payload(
+        final_nrf24_address,
+        sizeof(final_nrf24_address),
+        received_nrf24_address_packet,
+        sizeof(received_nrf24_address_packet),
+        aes_ctx,
+        aes_iv
+    );
+
+    printf("Decrypted ADDRESS received: \n");
+    for (int i = 0; i < sizeof(final_nrf24_address); i++) {
+        printf("%x, ", final_nrf24_address[i]);
+    }
+    printf("\n");
 
     // Update the destination address with the new one sent by the central station.
-    nrf24_module->tx_destination(received_packet);
+    nrf24_module->tx_destination(final_nrf24_address);
 
     // Set the nrf24 module to standby-I mode to prepare it to enter TX mode and
     // wait for a while to ensure it's entered TX mode.
@@ -319,6 +525,81 @@ int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
 }
 
 
+
+void encrypt_nrf24_payload(
+    uint8_t plain_text_payload[],
+    size_t plain_text_payload_size,
+    uint8_t encrypted_payload[],
+    struct AES_ctx *aes_ctx,
+    uint8_t aes_iv[],
+    uint32_t *aes_ctr_counter
+) {
+
+    uint8_t aes_ctr_counter_array[AES_IV_COUNTER_SIZE];
+    uint32_to_u8_be(*aes_ctr_counter, aes_ctr_counter_array);
+
+    memcpy(
+        aes_iv + AES_IV_SIZE - 4,
+        aes_ctr_counter_array,
+        sizeof(aes_ctr_counter_array)
+    );
+
+    memcpy(
+        encrypted_payload,
+        plain_text_payload,
+        plain_text_payload_size
+    );
+
+    AES_ctx_set_iv(aes_ctx, aes_iv);
+    AES_CTR_xcrypt_buffer(aes_ctx, encrypted_payload, plain_text_payload_size);
+    memcpy(
+        encrypted_payload + plain_text_payload_size,
+        aes_ctr_counter,
+        AES_IV_COUNTER_SIZE
+    );
+    *aes_ctr_counter++;
+}
+
+
+
+void decrypt_nrf24_payload(
+    uint8_t plain_text_payload[],
+    size_t plain_text_payload_size,
+    uint8_t encrypted_payload[],
+    size_t encrypted_payload_size,
+    struct AES_ctx *aes_ctx,
+    uint8_t aes_iv[]
+) {
+
+    memcpy(
+        aes_iv + AES_IV_SIZE - AES_IV_COUNTER_SIZE,
+        encrypted_payload + encrypted_payload_size - AES_IV_COUNTER_SIZE,
+        AES_IV_COUNTER_SIZE
+    );
+
+    memcpy(
+        plain_text_payload,
+        encrypted_payload,
+        plain_text_payload_size
+    );
+
+    printf("ENCRYPTED payload: ");
+    for (int i = 0; i < plain_text_payload_size; i++) {
+        printf("%x, ", plain_text_payload[i]);
+    }
+    printf("\n");
+
+    AES_ctx_set_iv(aes_ctx, aes_iv);
+    AES_CTR_xcrypt_buffer(
+        aes_ctx,
+        plain_text_payload,
+        plain_text_payload_size
+    );
+
+}
+
+
+
 /**
  * @brief Create an encrypted message from the readings of the sensors.
  * 
@@ -330,7 +611,7 @@ int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
  */
 void encrypt_ambient_info_message(
     ambient_info_t reading,
-    struct AES_ctx aes_ctx,
+    struct AES_ctx *aes_ctx,
     const uint8_t aes_key[],
     const uint8_t aes_iv[],
     uint8_t message[]
@@ -347,8 +628,7 @@ void encrypt_ambient_info_message(
     uint8_t payload[sizeof(ambient_values_array)];
     memcpy(payload, ambient_values_array, sizeof(ambient_values_array));
     
-    AES_init_ctx_iv(&aes_ctx, aes_key, aes_iv);
-    AES_CTR_xcrypt_buffer(&aes_ctx, payload, sizeof(payload));
+    AES_CTR_xcrypt_buffer(aes_ctx, payload, sizeof(payload));
 
     memcpy(message, payload, sizeof(payload));
 }

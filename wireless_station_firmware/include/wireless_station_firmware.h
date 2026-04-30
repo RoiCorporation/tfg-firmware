@@ -6,6 +6,7 @@
 #include "bme68x.h"
 #include "ssd1306.h"
 #include "nrf24_driver.h"
+#include "ecdh.h"
 #include "aes.h"
 #endif
 
@@ -14,7 +15,7 @@
 #define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
 #define STATION_ID_BYTES_LENGTH 16
 #define NRF24_ADDRESS_SIZE 5
-#define HANDSHAKE_SEND_ID_ATTEMPTS 10
+#define HANDSHAKE_RETRANSMISSIONS 5
 #define TOUCH_BUTTON_PIN 7
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
@@ -45,14 +46,32 @@
 #define CIPO_PIN 16
 #define SPI_BAUDRATE 5000000
 
-/* AES-256 CRT */
-static const uint8_t AES_256_KEY[32] = {
-    0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-    0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 
+/* KDF AND AES-256 CRT */
+#define KDF_SALT_SIZE 64
+#define AES_KEY_SIZE 32
+#define AES_IV_SIZE 16
+#define AES_IV_COUNTER_SIZE 4
+static uint8_t KDF_SALT[KDF_SALT_SIZE] = {
+    0x77, 0xe3, 0x3e, 0x8c, 0x26, 0x0d, 0x2c, 0x61,
+    0x60, 0x5c, 0x2c, 0x6c, 0xc2, 0x4a, 0xe6, 0x84, 
+    0x7a, 0x2c, 0x2c, 0x72, 0x8e, 0x73, 0x20, 0x59,
+    0x0c, 0xdb, 0xda, 0x76, 0xf2, 0x17, 0x75, 0xf9,
+    0x63, 0x53, 0x3a, 0xde, 0x2d, 0x96, 0x10, 0x1b,
+    0x94, 0x79, 0x10, 0x75, 0xe4, 0x70, 0x86, 0x3d,
+    0x23, 0x9b, 0xb5, 0x98, 0xec, 0x89, 0xb0, 0x4f,
+    0x23, 0x83, 0xfe, 0x1d, 0xe7, 0x3d, 0xce, 0x5b 
 };
-static const uint8_t AES_256_IV[16] = { 
-    0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff 
+static uint8_t AES_256_IV[16] = { 
+    0x5a, 0x83, 0x95, 0x62, 0x3c, 0x7f, 0xa8, 0xf7,
+    0x38, 0x29, 0x9b, 0x3a, 0x3e, 0x7f, 0x43, 0x5d
 };
+
+/* ENUMS */
+typedef enum {
+    NO_ACTION,
+    TURN_ON_DISPLAY,
+    START_HANDSHAKE
+} button_action_t;
 
 /* STRUCTS */
 typedef struct {
@@ -66,7 +85,6 @@ typedef struct {
 #ifndef TEST
 typedef struct {
     ssd1306_t *oled_display;
-    nrf_client_t *nrf24_module;
 } button_ctx_t;
 
 typedef struct {
@@ -79,7 +97,7 @@ typedef struct {
 
 
 /* FUNCTION DECLARATIONS */
-// Declarations for setup functions.
+// Functions for setup and configuration.
 #ifndef TEST
 void initialize_station(
     struct bme68x_dev *bme680_sensor,
@@ -87,6 +105,8 @@ void initialize_station(
     struct bme68x_heatr_conf *bme680_heater_conf,
     ssd1306_t *oled_display,
     nrf_client_t *nrf24_module,
+    uint8_t ecdh_private_key[],
+    uint8_t ecdh_public_key[],
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -109,10 +129,18 @@ void initialize_nrf24_module(
     uint8_t ce_pin,
     uint32_t spi_baudrate
 );
-int8_t handshake(nrf_client_t *nrf24_module);
+int8_t handshake(
+    nrf_client_t *nrf24_module,
+    uint8_t ecdh_private_key[],
+    uint8_t ecdh_public_key[],
+    uint8_t kdf_salt[],
+    struct AES_ctx *aes_ctx,
+    uint8_t aes_key[],
+    uint8_t aes_iv[]
+);
 void button_callback(uint gpio, uint32_t events);
 
-// Declarations for functions related to sensor readings.
+// Functions related to sensor readings.
 int8_t read_bme680_sensor(
     struct bme68x_dev bme680_sensor,
     struct bme68x_conf bme680_conf,
@@ -122,9 +150,27 @@ int8_t read_bme680_sensor(
 int8_t read_temperature_and_humidity(ambient_info_t *reading);
 int8_t read_light_intensity(ambient_info_t *reading);
 int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]);
+
+// Functions related to message encryption and decryption.
+void encrypt_nrf24_payload(
+    uint8_t plain_text_payload[],
+    size_t plain_text_payload_size,
+    uint8_t encrypted_payload[],
+    struct AES_ctx *aes_ctx,
+    uint8_t aes_iv[],
+    uint32_t *aes_ctr_counter
+);
+void decrypt_nrf24_payload(
+    uint8_t plain_text_payload[],
+    size_t plain_text_payload_size,
+    uint8_t encrypted_payload[],
+    size_t encrypted_payload_size,
+    struct AES_ctx *aes_ctx,
+    uint8_t aes_iv[]
+);
 void encrypt_ambient_info_message(
     ambient_info_t reading,
-    struct AES_ctx aes_ctx,
+    struct AES_ctx *aes_ctx,
     const uint8_t aes_key[],
     const uint8_t aes_iv[],
     uint8_t message[]

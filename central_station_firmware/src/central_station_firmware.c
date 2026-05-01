@@ -361,6 +361,14 @@ int main() {
                 NRF24_ADDRESSES_BUFFER_SIZE
             );
 
+            printf("Map buffer state: \n");
+            for (int i = 0; i < NRF24_ADDRESSES_BUFFER_SIZE; i++) {
+                printf("%d: IDs: %s, counter: %u\n", i, 
+                    station_id_to_nrf24_address_buffer[i].associated_station_id,
+                    station_id_to_nrf24_address_buffer[i].aes_ctr_counter
+                );
+            }
+
             // If the handshake procedure failed, print an appropriate error message.
             if (handshake_result != 0) {
                 printf("Error on the handshake when associating a wireless station. Error number %d\n",

@@ -14,8 +14,10 @@
 /* CONSTANTS */
 #define AMBIENT_INFO_FIELD_COUNT sizeof(ambient_info_t) / sizeof(float)
 #define STATION_ID_BYTES_LENGTH 16
+#define NRF24_MAX_PACKET_SIZE 32
 #define NRF24_ADDRESS_SIZE 5
 #define HANDSHAKE_RETRANSMISSIONS 5
+#define HANDSHAKE_MAX_READ_LOOP_ITERATIONS 100
 #define TOUCH_BUTTON_PIN 7
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
@@ -59,7 +61,7 @@ static uint8_t KDF_SALT[KDF_SALT_SIZE] = {
     0x63, 0x53, 0x3a, 0xde, 0x2d, 0x96, 0x10, 0x1b,
     0x94, 0x79, 0x10, 0x75, 0xe4, 0x70, 0x86, 0x3d,
     0x23, 0x9b, 0xb5, 0x98, 0xec, 0x89, 0xb0, 0x4f,
-    0x23, 0x83, 0xfe, 0x1d, 0xe7, 0x3d, 0xce, 0x5b 
+    0x23, 0x83, 0xfe, 0x1d, 0xe7, 0x3d, 0xce, 0x5b
 };
 static uint8_t AES_256_IV[16] = { 
     0x5a, 0x83, 0x95, 0x62, 0x3c, 0x7f, 0xa8, 0xf7,
@@ -138,6 +140,7 @@ int8_t handshake(
     uint8_t aes_key[],
     uint8_t aes_iv[]
 );
+void exit_handshake(nrf_client_t *nrf24_module);
 void button_callback(uint gpio, uint32_t events);
 
 // Functions related to sensor readings.
@@ -162,7 +165,6 @@ void encrypt_nrf24_payload(
 );
 void decrypt_nrf24_payload(
     uint8_t plain_text_payload[],
-    size_t plain_text_payload_size,
     uint8_t encrypted_payload[],
     size_t encrypted_payload_size,
     struct AES_ctx *aes_ctx,

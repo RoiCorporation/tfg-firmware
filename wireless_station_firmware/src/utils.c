@@ -24,48 +24,6 @@ int8_t hex_value(char c) {
 }
 
 
-void uint32_to_u8_be(uint32_t value, uint8_t array[]) {
-    array[0] = (uint8_t)((value >> 24) & 0xff);
-    array[1] = (uint8_t)((value >> 16) & 0xff);
-    array[2] = (uint8_t)((value >> 8)  & 0xff);
-    array[3] = (uint8_t)( value        & 0xff);
-}
-
-
-void kdf(
-    uint8_t *output_key,
-    size_t output_key_size,
-    uint8_t *shared_secret,
-    size_t shared_secret_size,
-    uint8_t *salt,
-    size_t salt_size
-){
-    // Info must be 8 bytes
-    uint8_t chacha_nonce[8] = {'I', '5', 'S', 'K', 'L', 'Y', '0', '8'};
-
-	// Extract.
-	uint8_t prk[32];
-	crypto_blake2b_keyed(
-        prk,
-        sizeof(prk),
-        salt,
-        sizeof(salt),
-        shared_secret,
-        shared_secret_size
-    );
-
-	// Expand.
-	crypto_chacha20_djb(
-        output_key,
-        NULL,
-        output_key_size,
-        prk,
-        chacha_nonce,
-        0
-    );
-}
-
-
 /**
  * @brief Convert hex string to bytes (2 hex chars → 1 byte).
  * 
@@ -115,6 +73,68 @@ int8_t hex_string_to_bytes(const char *hex, uint8_t *out, size_t out_size) {
     }
 
     return (int8_t)j;
+}
+
+
+/**
+ * @brief Convert a uint32_t value into an array containing its 4 bytes.
+ * 
+ * @param value uint32_t number to convert to an array.
+ * @param array uint8_t array that will store the bytes that make up the value
+ * passed. Its size must be 4 and the bytes are arranged in big-endian.
+ */
+void uint32_to_u8_be(uint32_t value, uint8_t array[]) {
+    array[0] = (uint8_t)((value >> 24) & 0xff);
+    array[1] = (uint8_t)((value >> 16) & 0xff);
+    array[2] = (uint8_t)((value >> 8)  & 0xff);
+    array[3] = (uint8_t)( value        & 0xff);
+}
+
+
+/**
+ * @brief Key-Derivation Function used to create a key for the AES encryption
+ * module from the shared secret generated after the ECDH key exchange.
+ * 
+ * @param output_key uint8_t array that will contain the generated key.
+ * @param output_key_size size_t size of the key in bytes.
+ * @param shared_secret uint8_t array that contains the shared secret generated
+ * after the ECDH key exchange.
+ * @param shared_secret_size size_t size of the shared secret in bytes.
+ * @param salt uint8_t array containing the salt used to increase the randomness
+ * of the generated key.
+ * @param salt_size size_t size of the salt in bytes.
+ */
+void kdf(
+    uint8_t *output_key,
+    size_t output_key_size,
+    uint8_t *shared_secret,
+    size_t shared_secret_size,
+    uint8_t *salt,
+    size_t salt_size
+){
+    // Nonce must be 8 bytes.
+    uint8_t chacha_nonce[8] = {'I', '5', 'S', 'K', 'L', 'Y', '0', '8'};
+
+	// Extract.
+	uint8_t prk[32];
+	crypto_blake2b_keyed(
+        prk,
+        sizeof(prk),
+        salt,
+        salt_size,
+        shared_secret,
+        shared_secret_size
+    );
+
+	// Expand.
+	crypto_chacha20_djb(
+        output_key,
+        NULL,
+        output_key_size,
+        prk,
+        chacha_nonce,
+        0
+    );
 }
 
 

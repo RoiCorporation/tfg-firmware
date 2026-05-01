@@ -14,13 +14,14 @@
 
 /* CONSTANTS*/
 #define AMBIENT_INFO_FIELD_COUNT (sizeof(ambient_info_t) - STATION_ID_CHAR_LENGTH - 3) / sizeof(float)
+#define WIRELESS_STATION_DATA_FIELD_COUNT 5
 #define STATION_ID_BYTES_LENGTH 16
 #define STATION_ID_CHAR_LENGTH 37
 #define NRF24_MAX_PACKET_SIZE 32
 #define NRF24_ADDRESS_SIZE 5
 #define NRF24_ADDRESSES_BUFFER_SIZE 6
 #define HANDSHAKE_RETRANSMISSIONS 5
-#define HANDSHAKE_MAX_READ_LOOP_ITERATIONS 1000
+#define HANDSHAKE_MAX_READ_LOOP_ITERATIONS 300
 #define TOUCH_BUTTON_PIN 7
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
@@ -112,9 +113,10 @@ typedef struct {
 
 typedef struct {
     uint8_t nrf24l01_address[NRF24_ADDRESS_SIZE];
-    char *associated_station_id;
+    char *station_id;
+    struct AES_ctx aes_ctx;
     uint32_t aes_ctr_counter;
-} station_id_address_map_t;
+} associated_wireless_station_info_t;
 
 typedef struct {
     uint8_t display_turn;
@@ -141,7 +143,7 @@ void initialize_station(
     struct bme68x_heatr_conf *bme680_heater_conf,
     ssd1306_t *oled_display,
     nrf_client_t *nrf24_module,
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     uint8_t ecdh_private_key[],
     uint8_t ecdh_public_key[],
     struct mg_mgr *connection_manager,
@@ -160,7 +162,7 @@ void initialize_bme680_sensor(
 );
 void initialize_nrf24_module(
     nrf_client_t *nrf24_module,
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -173,15 +175,13 @@ int8_t handshake(
     uint8_t ecdh_private_key[],
     uint8_t ecdh_public_key[],
     uint8_t kdf_salt[],
-    struct AES_ctx *aes_ctx,
-    uint8_t aes_key[],
     uint8_t aes_iv[],
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     size_t buffer_size
 );
 void exit_handshake(
     nrf_client_t *nrf24_module,
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     size_t buffer_size,
     uint8_t data_pipe_read,
     int8_t mappings_buffer_modified
@@ -197,9 +197,10 @@ int8_t read_bme680_sensor(
 );
 int8_t read_temperature_and_humidity(ambient_info_t *reading);
 int8_t read_light_intensity(ambient_info_t *reading);
-int8_t receive_radio_message(
-    nrf_client_t nrf24_module,
+int8_t receive_station_readings(
+    nrf_client_t *nrf24_module,
     uint8_t message[],
+    size_t message_size,
     uint8_t *incoming_packet_data_pipe
 );
 
@@ -222,8 +223,7 @@ void decrypt_nrf24_payload(
 void decrypt_ambient_info_message(
     ambient_info_t *received_readings, 
     struct AES_ctx *aes_ctx, 
-    const uint8_t aes_key[], 
-    const uint8_t aes_iv[], 
+    uint8_t aes_iv[], 
     uint8_t message[]
 );
 #endif

@@ -1,6 +1,7 @@
 #ifndef WIRELESS_STATION_FIRMWARE_H
 #define WIRELESS_STATION_FIRMWARE_H
 
+
 #include <stdint.h>
 #ifndef TEST
 #include "bme68x.h"
@@ -137,7 +138,6 @@ int8_t handshake(
     uint8_t ecdh_public_key[],
     uint8_t kdf_salt[],
     struct AES_ctx *aes_ctx,
-    uint8_t aes_key[],
     uint8_t aes_iv[]
 );
 void exit_handshake(nrf_client_t *nrf24_module);
@@ -152,7 +152,11 @@ int8_t read_bme680_sensor(
 );
 int8_t read_temperature_and_humidity(ambient_info_t *reading);
 int8_t read_light_intensity(ambient_info_t *reading);
-int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]);
+int8_t transmit_station_readings(
+    nrf_client_t *nrf24_module,
+    uint8_t message[],
+    size_t message_size
+);
 
 // Functions related to message encryption and decryption.
 void encrypt_nrf24_payload(
@@ -171,10 +175,9 @@ void decrypt_nrf24_payload(
     uint8_t aes_iv[]
 );
 void encrypt_ambient_info_message(
-    ambient_info_t reading,
+    ambient_info_t *reading,
     struct AES_ctx *aes_ctx,
-    const uint8_t aes_key[],
-    const uint8_t aes_iv[],
+    uint8_t aes_iv[],
     uint8_t message[]
 );
 #endif

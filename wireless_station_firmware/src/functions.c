@@ -13,6 +13,7 @@
 
 extern uint32_t aes_ctr_counter;
 
+
 /**
  * @brief Initialize the different station components, such as stdio, GPIO, I2C
  * and the sensors.
@@ -218,7 +219,6 @@ int8_t handshake(
     uint8_t ecdh_public_key[],
     uint8_t kdf_salt[],
     struct AES_ctx *aes_ctx,
-    uint8_t aes_key[],
     uint8_t aes_iv[]
 ) {
 
@@ -226,12 +226,13 @@ int8_t handshake(
 
     // Variables used in the method.
     int read_loop_iterations = 0;
-    uint8_t station_id_in_bytes[STATION_ID_BYTES_LENGTH] = {0x00};
-    uint8_t nrf24_address_packet[NRF24_ADDRESS_SIZE + AES_IV_COUNTER_SIZE] = {0x00};
     uint8_t other_station_ecdh_public_key[ECC_PUB_KEY_SIZE] = {0x00};
-    uint8_t shared_secret[ECC_PUB_KEY_SIZE] = {0x00};
     uint8_t aux_pub_key_first_half_buffer[ECC_PUB_KEY_SIZE / 2] = {0x00};
     uint8_t aux_pub_key_second_half_buffer[ECC_PUB_KEY_SIZE / 2] = {0x00};
+    uint8_t shared_secret[ECC_PUB_KEY_SIZE] = {0x00};
+    uint8_t aes_key[AES_KEY_SIZE] = {0x00};
+    uint8_t station_id_in_bytes[STATION_ID_BYTES_LENGTH] = {0x00};
+    uint8_t nrf24_address_packet[NRF24_ADDRESS_SIZE + AES_IV_COUNTER_SIZE] = {0x00};
     uint8_t final_nrf24_address[NRF24_ADDRESS_SIZE] = {0x00};
     uint8_t aux_flush_rx_fifo_buffer[NRF24_MAX_PACKET_SIZE] = {0x00};
     uint8_t handshake_result_packet[NRF24_MAX_PACKET_SIZE] = {0x00};
@@ -240,7 +241,8 @@ int8_t handshake(
 
     // Set the TX address to be the default handshake address that all
     // central stations listen to.
-    if (nrf24_module->tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00}) == ERROR)
+    if (nrf24_module->tx_destination(
+        (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00}) == ERROR)
         return (int8_t)-1;
 
     // Time buffer to ensure the central station has had time to get ready
@@ -260,7 +262,6 @@ int8_t handshake(
         sleep_ms(5);
     }
 
-    printf("REACHED 1\n");
     /* --------------------------------------------------------------------- */
     // Receive the first half of the central station's ECDH public key.
 
@@ -379,8 +380,6 @@ int8_t handshake(
 
     // Encrypt the message using the AES encryption module set up above.
     AES_CTR_xcrypt_buffer(aes_ctx, station_id_in_bytes, sizeof(station_id_in_bytes));
-
-    printf("REACHED 5\n");
 
     // Transmit this station's ID as an array of bytes.
     for (int i = 0; i < HANDSHAKE_RETRANSMISSIONS; i++) {
@@ -523,7 +522,6 @@ int8_t handshake(
  */
 void exit_handshake(nrf_client_t *nrf24_module) {
 
-    printf("EXITED HANDSHAKE FAIL\n");
     // Reset the AES CTR counter.
     aes_ctr_counter = 0;
     
@@ -605,11 +603,17 @@ int8_t read_light_intensity(ambient_info_t *reading) {
   * readings.
   * 
   * @param nrf24_module pointer to the NRF24L01 module driver.
-  * @param message array that contains the encrypted message to send.
+  * @param message uint8_t array that contains the encrypted message to send.
+  * @param message_size size_t size of the encrypted message buffer.
   * @return int8_t 0 if the radio message was sent successfully, -1 otherwise.
   */
-int8_t transmit_radio_message(nrf_client_t nrf24_module, uint8_t message[]) {
-    if (nrf24_module.send_packet(message, sizeof(ambient_info_t)) != ERROR)
+int8_t transmit_station_readings(
+    nrf_client_t *nrf24_module,
+    uint8_t message[],
+    size_t message_size
+) {
+
+    if (nrf24_module->send_packet(message, message_size) != ERROR)
         return (int8_t)0;
     return (int8_t)-1;
 }
@@ -736,32 +740,51 @@ void decrypt_nrf24_payload(
 /**
  * @brief Create an encrypted message from the readings of the sensors.
  * 
- * @param reading structure of sensor readings to include in the radio message.
- * @param aes_ctx AES decryption engine context.
- * @param aes_key encryption key needed to encrypt the message.
- * @param aes_iv initialization vector.
- * @param message array where the encrypted message will be stored.
+ * @param reading pointer to the ambient_info_t structure of sensor readings
+ * to include in the radio message.
+ * @param aes_ctx pointer to the AES encryption module.
+ * @param aes_iv uint8_t array containing the initialization vector for the AES
+ * CTR encryption/decryption scheme.
+ * @param message uint8_t array where the encrypted message will be stored.
  */
 void encrypt_ambient_info_message(
-    ambient_info_t reading,
+    ambient_info_t *reading,
     struct AES_ctx *aes_ctx,
-    const uint8_t aes_key[],
-    const uint8_t aes_iv[],
+    uint8_t aes_iv[],
     uint8_t message[]
 ) {
 
-    float ambient_values_array[] = {
-        reading.temperature,
-        reading.humidity,
-        reading.light_intensity,
-        reading.air_pressure,
-        reading.air_quality_index
+    float ambient_values_array[sizeof(ambient_info_t) / sizeof(float)] = {
+        reading->temperature,
+        reading->humidity,
+        reading->light_intensity,
+        reading->air_pressure,
+        reading->air_quality_index
     };
 
-    uint8_t payload[sizeof(ambient_values_array)];
-    memcpy(payload, ambient_values_array, sizeof(ambient_values_array));
-    
-    AES_CTR_xcrypt_buffer(aes_ctx, payload, sizeof(payload));
+    // Copy each float in the values array byte-to-byte into an auxiliary array.
+    uint8_t plain_text_ambient_info_payload[sizeof(ambient_values_array)];
+    memcpy(
+        plain_text_ambient_info_payload,
+        ambient_values_array,
+        sizeof(ambient_values_array)
+    );
 
-    memcpy(message, payload, sizeof(payload));
+    printf("Original readings: \n");
+    printf("Temperature: %f, Humidity: %f\n", reading->temperature, reading->humidity);
+    printf("Decrypted plain text bytes: \n");
+    for (int i = 0; i < sizeof(ambient_values_array); i++) {
+        printf("%x ", plain_text_ambient_info_payload[i]);
+    }
+    printf("\n\n");
+    
+    // Encrypt the message using the AES encryption module.
+    encrypt_nrf24_payload(
+        plain_text_ambient_info_payload,
+        sizeof(plain_text_ambient_info_payload),
+        message,
+        aes_ctx,
+        aes_iv,
+        &aes_ctr_counter
+    );
 }

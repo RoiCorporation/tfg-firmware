@@ -78,18 +78,18 @@ int8_t hex_string_to_bytes(const char *hex, uint8_t *out, size_t out_size) {
 
 
 /**
- * @brief Initialize the buffer that maps each associated station ID with
- * the particular address of each NRF24L01 module data pipe. Those addresses
+ * @brief Initialize the buffer that will store the necessary data regarding
+ * the wireless stations that are associated with a central one, such as their
+ * ID or their NRF24L01 destination address, among others. NRF24L01 addresses
  * are generated randomly in this method, ensuring no two of them match.
  * 
- * @param station_id_to_nrf24_address_buffer structure that stores the mapping
- * between the ID of each of the associated wireless stations and their respective
- * receiving address in this central station's NRF24 module.
+ * @param associated_wireless_stations_info_map buffer that maps all the necessary
+ * information of every wireless station associated with a central one.
  * @param buffer_size amount of data pipes of the module, should be 6.
  * @param address_size length (in bytes) of the addresses, should be 5.
  */
-void initialize_station_id_to_address_buffer(
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+void initialize_associated_station_info_map(
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     size_t buffer_size,
     size_t address_size
 ) {
@@ -100,8 +100,8 @@ void initialize_station_id_to_address_buffer(
     // Initialize all the station ID slots available to NULL and the AES
     // counters used for encryption to 0.
     for (int i = 0; i < buffer_size; i++) {
-        station_id_to_nrf24_address_buffer[i].associated_station_id = NULL;
-        station_id_to_nrf24_address_buffer[i].aes_ctr_counter = 0;
+        associated_wireless_stations_info_map[i].station_id = NULL;
+        associated_wireless_stations_info_map[i].aes_ctr_counter = 0;
     }
     
     // Array of size 256 that marks which bytes have been selected randomly for
@@ -115,23 +115,23 @@ void initialize_station_id_to_address_buffer(
         // Generate the full addresses for the first two data pipes (data pipes 0 and 1).
         if (i < 2) {
             for (int j = 0; j < address_size; j++)
-                station_id_to_nrf24_address_buffer[i].nrf24l01_address[j] = (uint8_t)get_rand_32();
+                associated_wireless_stations_info_map[i].nrf24l01_address[j] = (uint8_t)get_rand_32();
         }
 
         // For the remaining data pipes, only generate the LSB.
         else {
-            station_id_to_nrf24_address_buffer[i].nrf24l01_address[lsb_pos] = (uint8_t)get_rand_32();
+            associated_wireless_stations_info_map[i].nrf24l01_address[lsb_pos] = (uint8_t)get_rand_32();
         }
 
         // If the LSB of the current address isn't equal to another address' LSB,
         // mark it as assigned in the marks array. In any other case, repeat this
         // iteration to generate a new full address or LSB, depending on which
         // data pipe the address is for.
-        uint8_t lsb_value_before = lsbs_generated[station_id_to_nrf24_address_buffer[i].nrf24l01_address[lsb_pos]];
+        uint8_t lsb_value_before = lsbs_generated[associated_wireless_stations_info_map[i].nrf24l01_address[lsb_pos]];
         if (lsb_value_before != 0)
             i--;
         else
-            lsbs_generated[station_id_to_nrf24_address_buffer[i].nrf24l01_address[lsb_pos]] = 1;
+            lsbs_generated[associated_wireless_stations_info_map[i].nrf24l01_address[lsb_pos]] = 1;
     }
 }
 

@@ -20,6 +20,7 @@
 queue_t call_queue;
 button_action_t button_action = NO_ACTION;
 absolute_time_t time_button_press, time_button_release;
+ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
 
 
 void core1_entry() {
@@ -34,7 +35,6 @@ void core1_entry() {
     // Array of ambient_info_t elements that holds the n-previous
     // sensor readings. It's used to check for potential upcoming 
     // hazards, such as a flood, a sudden fire or a gas leak.
-    ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
     for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
         previous_readings[i].temperature = 0;
         previous_readings[i].humidity = 0;
@@ -216,14 +216,14 @@ void core1_entry() {
             ssd1306_poweroff(call_queue_entry.oled_display);
         }
         
-        if (mqtt_is_ready(&call_queue_entry.network_context) == 0) {
-            publish_environmental_readings(
-                call_queue_entry.network_context.mqtt_connection,
-                &station_readings
-            );
-        }
+        // if (mqtt_is_ready(&call_queue_entry.network_context) == 0) {
+        //     publish_environmental_readings(
+        //         call_queue_entry.network_context.mqtt_connection,
+        //         &station_readings
+        //     );
+        // }
         
-        mg_mgr_poll(call_queue_entry.network_context.connection_manager, 1000);
+        // mg_mgr_poll(call_queue_entry.network_context.connection_manager, 1000);
         
         // Wait another full minute before reading sensors again.
         sleep_ms(1000); //sleep_ms(MINUTE_IN_MILLISECONDS)
@@ -236,14 +236,13 @@ int main() {
 
     /* Variables */
     ambient_info_t station_readings, wireless_station_readings_buffer[NRF24_ADDRESSES_BUFFER_SIZE];
-    station_id_address_map_t station_id_to_nrf24_address_buffer[NRF24_ADDRESSES_BUFFER_SIZE];
+    associated_wireless_station_info_t associated_wireless_stations_info_map[NRF24_ADDRESSES_BUFFER_SIZE];
     uint8_t incoming_packet_data_pipe;
-    uint8_t radio_message[sizeof(ambient_info_t)];
+    uint8_t radio_message[sizeof(float) * WIRELESS_STATION_DATA_FIELD_COUNT + AES_IV_COUNTER_SIZE];
 
-    // ECDH and AES variables.
+    // ECDH variables.
     uint8_t ecdh_private_key[ECC_PRV_KEY_SIZE];
     uint8_t ecdh_public_key[ECC_PUB_KEY_SIZE];
-    uint8_t aes_key[AES_KEY_SIZE];
     
     /* Components and module drivers */
     // BME680 sensor driver and its configuration and heater structures.
@@ -256,9 +255,6 @@ int main() {
 
     // NRF24L01 module driver.
     nrf_client_t nrf24_module;
-
-    // AES decryption engine.
-    struct AES_ctx aes_ctx;
 
     // Network stack context and its associated structures.
     struct mg_mgr connection_manager;
@@ -286,7 +282,7 @@ int main() {
         &bme680_heater_conf,
         &oled_display,
         &nrf24_module,
-        station_id_to_nrf24_address_buffer,
+        associated_wireless_stations_info_map,
         ecdh_private_key,
         ecdh_public_key,
         network_context.connection_manager,
@@ -302,7 +298,7 @@ int main() {
     for (int i = 0; i < NRF24_ADDRESSES_BUFFER_SIZE; i++) {
         printf("%d-th address: ", i);
         for (int j = 0; j < NRF24_ADDRESS_SIZE; j++) {
-            printf("%x, ", station_id_to_nrf24_address_buffer[i].nrf24l01_address[j]);
+            printf("%x, ", associated_wireless_stations_info_map[i].nrf24l01_address[j]);
         }
         printf("\n");
     }
@@ -310,11 +306,11 @@ int main() {
     ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to WiFi...");
     ssd1306_show(&oled_display);
 
-    // mg_timer_add(&connection_manager, 200, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
+    mg_timer_add(&connection_manager, 200, MG_TIMER_REPEAT, mqtt_timer_fn, &network_context);
 
-    // while (mqtt_is_ready(&network_context) != 0) {
-    //     mg_mgr_poll(&connection_manager, 200);
-    // }
+    while (mqtt_is_ready(&network_context) != 0) {
+        mg_mgr_poll(&connection_manager, 200);
+    }
 
     queue_init(&call_queue, sizeof(queue_entry_t), 1);
     
@@ -326,46 +322,34 @@ int main() {
         .network_context = network_context
     };
 
-
-
-    printf("Generated public key: \n");
-    for (int i = 0; i < sizeof(ecdh_public_key); i++) {
-        printf("%x\t", ecdh_public_key[i]);
-        if (i % 8 == 0)
-            printf("\n");
-    }
-    printf("\n");
-
     // Launch the other core to start reading values with the sensors 
     // of this station, displaying their measurements on the OLED display
     // and uploading them to the database.
-    // multicore_launch_core1(core1_entry);
-    // queue_add_blocking(&call_queue, &call_queue_entry);
+    multicore_launch_core1(core1_entry);
+    queue_add_blocking(&call_queue, &call_queue_entry);
     
     while (1) {
 
         // Check for incoming connections from wireless stations.
         if (button_action == START_HANDSHAKE) {
             button_action = NO_ACTION;
-
+            
             // Start the handshake procedure.
             int8_t handshake_result = handshake(
                 &nrf24_module,
                 ecdh_private_key,
                 ecdh_public_key,
                 KDF_SALT,
-                &aes_ctx,
-                aes_key,
                 AES_256_IV,
-                station_id_to_nrf24_address_buffer,
+                associated_wireless_stations_info_map,
                 NRF24_ADDRESSES_BUFFER_SIZE
             );
 
             printf("Map buffer state: \n");
             for (int i = 0; i < NRF24_ADDRESSES_BUFFER_SIZE; i++) {
                 printf("%d: IDs: %s, counter: %u\n", i, 
-                    station_id_to_nrf24_address_buffer[i].associated_station_id,
-                    station_id_to_nrf24_address_buffer[i].aes_ctr_counter
+                    associated_wireless_stations_info_map[i].station_id,
+                    associated_wireless_stations_info_map[i].aes_ctr_counter
                 );
             }
 
@@ -376,9 +360,10 @@ int main() {
             }
         }
 
-        if (receive_radio_message(
-            nrf24_module,
+        if (receive_station_readings(
+            &nrf24_module,
             radio_message,
+            sizeof(radio_message),
             &incoming_packet_data_pipe
         ) == -1) {
             printf("Error when receiving a wireless station readings. Error number %d\n", 
@@ -390,35 +375,44 @@ int main() {
             wireless_station_readings_buffer[incoming_packet_data_pipe].light_intensity = NAN;
             wireless_station_readings_buffer[incoming_packet_data_pipe].air_pressure = NAN;
             wireless_station_readings_buffer[incoming_packet_data_pipe].air_quality_index = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].carbon_monoxide_concentration = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].methane_concentration = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].propane_concentration = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].alcohol_concentration = NAN;
+            wireless_station_readings_buffer[incoming_packet_data_pipe].hydrogen_gas_concentration = NAN;
 
             decrypt_ambient_info_message(
                 &(wireless_station_readings_buffer[incoming_packet_data_pipe]),
-                &aes_ctx, aes_key, AES_256_IV, radio_message
+                &associated_wireless_stations_info_map[incoming_packet_data_pipe].aes_ctx,
+                AES_256_IV,
+                radio_message
             );
 
             memcpy(
                 wireless_station_readings_buffer[incoming_packet_data_pipe].station_id,
-                station_id_to_nrf24_address_buffer[incoming_packet_data_pipe].associated_station_id,
+                associated_wireless_stations_info_map[incoming_packet_data_pipe].station_id,
                 STATION_ID_CHAR_LENGTH
             );
             wireless_station_readings_buffer[
                 incoming_packet_data_pipe].station_id[STATION_ID_CHAR_LENGTH - 1] = '\0';
 
-            printf("Temperature: %f; Humidity: %f; ID: %s\n",
+            printf("Temperature: %f; Humidity: %f; Light intensity: %f; Air pressure: %f ID: %s\n",
                 wireless_station_readings_buffer[incoming_packet_data_pipe].temperature,
                 wireless_station_readings_buffer[incoming_packet_data_pipe].humidity,
+                wireless_station_readings_buffer[incoming_packet_data_pipe].light_intensity,
+                wireless_station_readings_buffer[incoming_packet_data_pipe].air_pressure,
                 wireless_station_readings_buffer[incoming_packet_data_pipe].station_id
             );
 
-            // if (mqtt_is_ready(&network_context) == 0) {
-            //     publish_environmental_readings(
-            //         network_context.mqtt_connection,
-            //         &wireless_station_readings_buffer[incoming_packet_data_pipe]
-            //     );
-            // }
+            if (mqtt_is_ready(&network_context) == 0) {
+                publish_environmental_readings(
+                    network_context.mqtt_connection,
+                    &wireless_station_readings_buffer[incoming_packet_data_pipe]
+                );
+            }
         }
         printf("\n");
-        sleep_ms(1000);
+        mg_mgr_poll(&connection_manager, 600);
     }
 
     mg_mgr_free(&connection_manager);

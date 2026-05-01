@@ -27,8 +27,8 @@
  * to generate an ECDH public key.
  * @param ecdh_public_key uint8_t array that will store the station's ECDH public
  * key to send in a handshake association attempt with another station.
- * @param station_id_to_nrf24_address_buffer buffer that maps the associated
- * wireless stations ID's with the NRF24L01 module data pipe addresses.
+ * @param associated_wireless_stations_info_map buffer that maps all the necessary
+ * information of every wireless station associated with this central one.
  * @param connection_manager pointer to the connection manager.
  * @param copi_pin SPI COPI microcontroller pin.
  * @param cipo_pin CIPO microcontroller pin.
@@ -43,7 +43,7 @@ void initialize_station(
     struct bme68x_heatr_conf *bme680_heater_conf,
     ssd1306_t *oled_display,
     nrf_client_t *nrf24_module,
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     uint8_t ecdh_private_key[],
     uint8_t ecdh_public_key[],
     struct mg_mgr *connection_manager,
@@ -62,14 +62,14 @@ void initialize_station(
     ssd1306_init(oled_display, 128, 64, OLED_DISPLAY_I2C_ADDRESS, i2c0);
     sleep_ms(200);
     ssd1306_clear(oled_display);
-    initialize_station_id_to_address_buffer(
-        station_id_to_nrf24_address_buffer,
+    initialize_associated_station_info_map(
+        associated_wireless_stations_info_map,
         NRF24_ADDRESSES_BUFFER_SIZE,
         NRF24_ADDRESS_SIZE
     );
     initialize_nrf24_module(
         nrf24_module,
-        station_id_to_nrf24_address_buffer,
+        associated_wireless_stations_info_map,
         copi_pin,
         cipo_pin,
         sck_pin,
@@ -157,6 +157,8 @@ void initialize_bme680_sensor(
  * @brief Configure the NRF24L01 module.
  * 
  * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param associated_wireless_stations_info_map buffer that maps all the necessary
+ * information of every wireless station associated with this central one.
  * @param copi_pin SPI COPI microcontroller pin.
  * @param cipo_pin SPI CIPO microcontroller pin.
  * @param sck_pin SPI SCK microcontroller pin.
@@ -166,7 +168,7 @@ void initialize_bme680_sensor(
  */
 void initialize_nrf24_module(
     nrf_client_t *nrf24_module,
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -209,7 +211,10 @@ void initialize_nrf24_module(
     // from wireless stations and initialize the remaining data pipe's addresses.
     nrf24_module->rx_destination(DATA_PIPE_0, (uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
     for (data_pipe_t pipe = DATA_PIPE_1; pipe < ALL_DATA_PIPES; pipe++) {
-        nrf24_module->rx_destination(pipe, station_id_to_nrf24_address_buffer[pipe].nrf24l01_address);
+        nrf24_module->rx_destination(
+            pipe,
+            associated_wireless_stations_info_map[pipe].nrf24l01_address
+        );
     }
 
     // Configure the transmit destination for when the station needs to send
@@ -232,13 +237,10 @@ void initialize_nrf24_module(
  * @param ecdh_public_key uint8_t array that stores the station's ECDH public
  * key that gets sent to the other station at the beginning of the handshake.
  * @param kdf_salt uint8_t array containing the salt used in the KDF.
- * @param aes_ctx pointer to the AES encryption module.
- * @param aes_key uint8_t array that will store the AES encryption key after
- * invoking the KDF.
  * @param aes_iv uint8_t array containing the initialization vector with which
  * to set up the AES encryption module.
- * @param station_id_to_nrf24_address_buffer buffer that stores the mapping
- * between each associated station's ID and their respective NRF24 address.
+ * @param associated_wireless_stations_info_map buffer that maps all the necessary
+ * information of every wireless station associated with this central one.
  * @param buffer_size size of the buffer that maps each station ID with their
  * corresponding NRF24 module address. 
  * @return int8_t 0 if the handshake was completed successfully, -1 otherwise.
@@ -248,10 +250,8 @@ int8_t handshake(
     uint8_t ecdh_private_key[],
     uint8_t ecdh_public_key[],
     uint8_t kdf_salt[],
-    struct AES_ctx *aes_ctx,
-    uint8_t aes_key[],
     uint8_t aes_iv[],
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     size_t buffer_size
 ) {
 
@@ -262,12 +262,13 @@ int8_t handshake(
     int8_t mappings_buffer_modified = -1;
     uint8_t data_pipe_read = 0;
     data_pipe_t first_available_data_pipe = ALL_DATA_PIPES;
-    uint8_t wireless_station_id_bytes[STATION_ID_BYTES_LENGTH] = {0x00};
-    uint8_t nrf24_address_available[NRF24_ADDRESS_SIZE] = {0x00};
     uint8_t other_station_ecdh_public_key[ECC_PUB_KEY_SIZE] = {0x00};
-    uint8_t shared_secret[ECC_PUB_KEY_SIZE] = {0x00};
     uint8_t aux_pub_key_first_half_buffer[ECC_PUB_KEY_SIZE / 2] = {0x00};
     uint8_t aux_pub_key_second_half_buffer[ECC_PUB_KEY_SIZE / 2] = {0x00};
+    uint8_t shared_secret[ECC_PUB_KEY_SIZE] = {0x00};
+    uint8_t aes_key[AES_KEY_SIZE] = {0x00};
+    uint8_t wireless_station_id_bytes[STATION_ID_BYTES_LENGTH] = {0x00};
+    uint8_t nrf24_address_available[NRF24_ADDRESS_SIZE] = {0x00};
     uint8_t nrf24_address_packet[NRF24_ADDRESS_SIZE + AES_IV_COUNTER_SIZE] = {0x00};
     uint8_t check_nrf24_address[NRF24_ADDRESS_SIZE] = {0x00};
     uint8_t aux_flush_rx_fifo_buffer[NRF24_MAX_PACKET_SIZE] = {0x00};
@@ -277,7 +278,7 @@ int8_t handshake(
     
     // Search the first available data pipe.
     for (int i = 0; i < buffer_size; i++) {
-        if (station_id_to_nrf24_address_buffer[i].associated_station_id == NULL) {
+        if (associated_wireless_stations_info_map[i].station_id == NULL) {
             first_available_data_pipe = i;
             break;
         }
@@ -319,7 +320,7 @@ int8_t handshake(
         if (read_loop_iterations >= HANDSHAKE_MAX_READ_LOOP_ITERATIONS) {
             exit_handshake(
                 nrf24_module,
-                station_id_to_nrf24_address_buffer,
+                associated_wireless_stations_info_map,
                 buffer_size,
                 data_pipe_read,
                 mappings_buffer_modified
@@ -379,7 +380,7 @@ int8_t handshake(
         if (read_loop_iterations >= HANDSHAKE_MAX_READ_LOOP_ITERATIONS) {
             exit_handshake(
                 nrf24_module,
-                station_id_to_nrf24_address_buffer,
+                associated_wireless_stations_info_map,
                 buffer_size,
                 data_pipe_read,
                 mappings_buffer_modified
@@ -431,8 +432,14 @@ int8_t handshake(
         KDF_SALT_SIZE
     );
 
-    // Initialize the AES encryption module.
-    AES_init_ctx_iv(aes_ctx, aes_key, aes_iv);
+    // Initialize the AES encryption module of the wireless station info
+    // map entry that corresponds to the data pipe were messages for this
+    // handshake are being received.
+    AES_init_ctx_iv(
+        &associated_wireless_stations_info_map[data_pipe_read].aes_ctx,
+        aes_key,
+        aes_iv
+    );
 
     /* --------------------------------------------------------------------- */
     // Receive and decrypt the wireless station's ID.
@@ -470,19 +477,23 @@ int8_t handshake(
                 if (nrf24_module->read_packet(
                     wireless_station_id_bytes, sizeof(wireless_station_id_bytes)) != ERROR) 
                 {
-
-                    AES_CTR_xcrypt_buffer(aes_ctx, wireless_station_id_bytes, sizeof(wireless_station_id_bytes));
+            
+                    AES_CTR_xcrypt_buffer(
+                        &associated_wireless_stations_info_map[data_pipe_read].aes_ctx,
+                        wireless_station_id_bytes,
+                        sizeof(wireless_station_id_bytes)
+                    );
                     mappings_buffer_modified = 0;
                     if (first_available_data_pipe < DATA_PIPE_2) {
                         nrf24_module->rx_destination(
                             first_available_data_pipe,
-                            station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address
+                            associated_wireless_stations_info_map[first_available_data_pipe].nrf24l01_address
                         );
                     }
                     else {
                         nrf24_module->rx_destination(
                             first_available_data_pipe,
-                            &station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address[NRF24_ADDRESS_SIZE - 1]
+                            &associated_wireless_stations_info_map[first_available_data_pipe].nrf24l01_address[NRF24_ADDRESS_SIZE - 1]
                         );
                     }
                     data_pipe_t next_available_data_pipe = first_available_data_pipe + 1;
@@ -508,7 +519,7 @@ int8_t handshake(
         if (read_loop_iterations >= HANDSHAKE_MAX_READ_LOOP_ITERATIONS) {
             exit_handshake(
                 nrf24_module,
-                station_id_to_nrf24_address_buffer,
+                associated_wireless_stations_info_map,
                 buffer_size,
                 data_pipe_read,
                 mappings_buffer_modified
@@ -525,7 +536,7 @@ int8_t handshake(
     // buffer entry mapped to the aforementioned data pipe.
     int8_t result_uuid_to_string_conversion = bytes_to_string_uuid(
         wireless_station_id_bytes,
-        &station_id_to_nrf24_address_buffer[first_available_data_pipe].associated_station_id,
+        &associated_wireless_stations_info_map[first_available_data_pipe].station_id,
         STATION_ID_BYTES_LENGTH,
         STATION_ID_CHAR_LENGTH
     );
@@ -546,27 +557,18 @@ int8_t handshake(
     // This is the payload of the packet that the nrf24 module will send.
     memcpy(
         nrf24_address_available,
-        station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address,
+        associated_wireless_stations_info_map[first_available_data_pipe].nrf24l01_address,
         NRF24_ADDRESS_SIZE
     );
-    
-    printf("REACHED 6\n");
-    
-    // Encrypt the message using the AES encryption module set up above.
-    printf("Decrypted ADDRESS sent: \n");
-    for (int i = 0; i < sizeof(nrf24_address_available); i++) {
-        printf("%x, ", nrf24_address_available[i]);
-    }
-    printf("\n");
 
     // Encrypt the message using the AES encryption module set up above.
     encrypt_nrf24_payload(
         nrf24_address_available,
         sizeof(nrf24_address_available),
         nrf24_address_packet,
-        aes_ctx,
+        &associated_wireless_stations_info_map[data_pipe_read].aes_ctx,
         aes_iv,
-        &station_id_to_nrf24_address_buffer[first_available_data_pipe].aes_ctr_counter
+        &associated_wireless_stations_info_map[first_available_data_pipe].aes_ctr_counter
     );
 
     printf("\n\n");
@@ -579,19 +581,15 @@ int8_t handshake(
     for (int i = 0; i < sizeof(nrf24_address_packet); i++) {
         printf("%x, ", nrf24_address_packet[i]);
     }
-    printf("\n");
+
     // Send the packet.
     for (int i = 0; i < HANDSHAKE_RETRANSMISSIONS; i++) {
-        nrf24_module->send_packet(nrf24_address_packet, sizeof(nrf24_address_packet));
+        nrf24_module->send_packet(
+            nrf24_address_packet,
+            sizeof(nrf24_address_packet)
+        );
         sleep_ms(15);
     }
-    
-    printf("REACHED 6\n");
-    printf("Encrypted message sent: \n");
-    for (int i = 0; i < sizeof(nrf24_address_packet); i++) {
-        printf("%x, ", nrf24_address_packet[i]);
-    }
-    printf("\n");
 
     /* --------------------------------------------------------------------- */
     // Receive the NRF24L01 address that the wireless station got to ensure
@@ -638,7 +636,7 @@ int8_t handshake(
         if (read_loop_iterations >= HANDSHAKE_MAX_READ_LOOP_ITERATIONS) {
             exit_handshake(
                 nrf24_module,
-                station_id_to_nrf24_address_buffer,
+                associated_wireless_stations_info_map,
                 buffer_size,
                 data_pipe_read,
                 mappings_buffer_modified
@@ -650,12 +648,6 @@ int8_t handshake(
     }
     read_loop_iterations = 0;
 
-    printf("Encrypted message received: \n");
-    for (int i = 0; i < sizeof(nrf24_address_packet); i++) {
-        printf("%x, ", nrf24_address_packet[i]);
-    }
-    printf("\n");
-
     // Decrypt the message containing the NRF24 destination address that
     // the wireless station received using the AES encryption module set
     // up above.
@@ -663,7 +655,7 @@ int8_t handshake(
         nrf24_address_available,
         nrf24_address_packet,
         sizeof(nrf24_address_packet),
-        aes_ctx,
+        &associated_wireless_stations_info_map[data_pipe_read].aes_ctx,
         aes_iv
     );
 
@@ -685,7 +677,7 @@ int8_t handshake(
     // Compare the two addresses.
     int comparison_result = memcmp(
         nrf24_address_available,
-        station_id_to_nrf24_address_buffer[first_available_data_pipe].nrf24l01_address,
+        associated_wireless_stations_info_map[first_available_data_pipe].nrf24l01_address,
         NRF24_ADDRESS_SIZE
     );
 
@@ -698,23 +690,15 @@ int8_t handshake(
             NRF24_MAX_PACKET_SIZE - AES_IV_COUNTER_SIZE
         );
     }
-    
-    printf("REACHED 8\n");
-    
-    printf("Decrypted result sent: \n");
-    for (int i = 0; i < sizeof(handshake_result); i++) {
-        printf("%x, ", handshake_result[i]);
-    }
-    printf("\n");
 
     // Encrypt the result using the AES encryption module set up above.
     encrypt_nrf24_payload(
         handshake_result,
         sizeof(handshake_result),
         handshake_result_packet,
-        aes_ctx,
+        &associated_wireless_stations_info_map[data_pipe_read].aes_ctx,
         aes_iv,
-        &station_id_to_nrf24_address_buffer[first_available_data_pipe].aes_ctr_counter
+        &associated_wireless_stations_info_map[first_available_data_pipe].aes_ctr_counter
     );
 
     printf("\n\n");
@@ -727,14 +711,15 @@ int8_t handshake(
     for (int i = 0; i < sizeof(handshake_result_packet); i++) {
         printf("%x, ", handshake_result_packet[i]);
     }
-    printf("\n");
+    
     // Send the packet.
     for (int i = 0; i < HANDSHAKE_RETRANSMISSIONS; i++) {
-        nrf24_module->send_packet(handshake_result_packet, sizeof(handshake_result_packet));
+        nrf24_module->send_packet(
+            handshake_result_packet,
+            sizeof(handshake_result_packet)
+        );
         sleep_ms(15);
     }
-    
-    printf("REACHED 8\n");
 
     // Set to module RX mode and wait for a while to ensure it's entered RX mode.
     nrf24_module->receiver_mode();
@@ -751,12 +736,12 @@ int8_t handshake(
 /**
  * @brief Handle the exit of the handshake protocol on failure, resetting the
  * configuration of the NRF24L01 module to its original setup and clearing any
- * entry on the address-to-id buffer that might have been updated during the
- * handshake.
+ * entry on the associated wireless info buffer that might have been updated
+ * during the handshake.
  * 
  * @param nrf24_module pointer to the NRF24L01 module driver.
- * @param station_id_to_nrf24_address_buffer buffer that stores the mapping
- * between each associated station's ID and their respective NRF24 address.
+ * @param associated_wireless_stations_info_map buffer that maps all the necessary
+ * information of every wireless station associated with this central one.
  * @param buffer_size size of the buffer that maps each station ID with their
  * corresponding NRF24 module address.
  * @param data_pipe_read the index of the mappings buffer entry that was modified.
@@ -765,19 +750,18 @@ int8_t handshake(
  */
 void exit_handshake(
     nrf_client_t *nrf24_module,
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     size_t buffer_size,
     uint8_t data_pipe_read,
     int8_t mappings_buffer_modified
 ) {
 
-    printf("EXITED HANDSHAKE FAIL\n");
     if (mappings_buffer_modified == 0) {
 
         // Reset the AES CTR counter and station ID of the mappings buffer
         // entry that was modified during the handshake.
-        station_id_to_nrf24_address_buffer[data_pipe_read].aes_ctr_counter = 0;
-        station_id_to_nrf24_address_buffer[data_pipe_read].associated_station_id = NULL;
+        associated_wireless_stations_info_map[data_pipe_read].station_id = NULL;
+        associated_wireless_stations_info_map[data_pipe_read].aes_ctr_counter = 0;
 
         // Reset the destination addresses of the NRF24L01 that were modified
         // during the handshake.
@@ -795,13 +779,13 @@ void exit_handshake(
             if (next_available_data_pipe < DATA_PIPE_2) {
                 nrf24_module->rx_destination(
                     next_available_data_pipe,
-                    station_id_to_nrf24_address_buffer[next_available_data_pipe].nrf24l01_address
+                    associated_wireless_stations_info_map[next_available_data_pipe].nrf24l01_address
                 );
             }
             else {
                 nrf24_module->rx_destination(
                     next_available_data_pipe,
-                    &station_id_to_nrf24_address_buffer[next_available_data_pipe].nrf24l01_address[NRF24_ADDRESS_SIZE - 1]
+                    &associated_wireless_stations_info_map[next_available_data_pipe].nrf24l01_address[NRF24_ADDRESS_SIZE - 1]
                 );
             }
         }
@@ -868,7 +852,8 @@ int8_t read_light_intensity(ambient_info_t *reading) {
     uint8_t buf[2];
     int bytes_read = i2c_read_blocking(i2c0, LIGHT_SENSOR_I2C_ADDRESS, buf, 2, false);
 
-    // If successful, calculate the actual light intensity in lux. Else, return -1.
+    // If successful, calculate the actual light intensity in lux.
+    // Otherwise, return -1.
     if (bytes_read == 2) {
         uint16_t raw = (buf[0] << 8) | buf[1];
         float lux = raw / 1.2f;
@@ -883,24 +868,24 @@ int8_t read_light_intensity(ambient_info_t *reading) {
 /**
  * @brief Receive and store an encrypted radio message that contains the
  * sensor readings of an associated wireless station. Also saves the data
- * pipe of the nrf24 module where the packet was received, to later identify
+ * pipe of the NRF24L01 module where the packet was received, to later identify
  * which wireless station sent the readings.
  * 
- * @param nrf24_module instance of the nrf24l01 driver with which the packet
- * will be received.
- * @param message array where the received message is stored.
+ * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param message uint8_t array where the received encrypted message is stored.
  * @param incoming_packet_data_pipe pointer to an uint8_t that will be assigned
  * with the data pipe number of the incoming packet.
  * @return int8_t 0 if the radio message was received successfully, -1 otherwise.
  */
-int8_t receive_radio_message(
-    nrf_client_t nrf24_module,
+int8_t receive_station_readings(
+    nrf_client_t *nrf24_module,
     uint8_t message[],
+    size_t message_size,
     uint8_t *incoming_packet_data_pipe
 ) {
     while (1) {
-        if (nrf24_module.is_packet(incoming_packet_data_pipe)) {            
-            if (nrf24_module.read_packet(message, sizeof(ambient_info_t)) != ERROR) {
+        if (nrf24_module->is_packet(incoming_packet_data_pipe)) {            
+            if (nrf24_module->read_packet(message, message_size) != ERROR) {
                 return (int8_t)0;
             }
             return (int8_t)-1;
@@ -1022,7 +1007,7 @@ void decrypt_nrf24_payload(
 
     printf("DECRYPTED payload: ");
     for (int i = 0; i < encrypted_payload_size - AES_IV_COUNTER_SIZE; i++) {
-        printf("%x, ", plain_text_payload[i]);
+        printf("%x ", plain_text_payload[i]);
     }
     printf("\n");
 }
@@ -1034,25 +1019,47 @@ void decrypt_nrf24_payload(
  * 
  * @param received_readings pointer to the sensor readings structure where
  * the decrypted readings will be stored.
- * @param aes_ctx AES decryption engine context.
- * @param aes_key decryption key needed to decrypt the message.
- * @param aes_iv initialization vector with which the original message was
- * encrypted.
- * @param message encrypted message as received by the radio module.
+ * @param aes_ctx pointer to the AES encryption module.
+ * @param aes_iv uint8_t array containing the initialization vector for the AES
+ * CTR encryption/decryption scheme.
+ * @param message uint8_t array containing the encrypted message as received by
+ * the radio module.
  */
 void decrypt_ambient_info_message(
     ambient_info_t *received_readings,
     struct AES_ctx *aes_ctx,
-    const uint8_t aes_key[],
-    const uint8_t aes_iv[],
+    uint8_t aes_iv[],
     uint8_t message[]
 ) {
-    float values_array[sizeof(ambient_info_t) / sizeof(float)];
+    float values_array[WIRELESS_STATION_DATA_FIELD_COUNT];
+    uint8_t plain_text_ambient_info_payload[sizeof(float) * WIRELESS_STATION_DATA_FIELD_COUNT];
 
-    AES_CTR_xcrypt_buffer(aes_ctx, message, sizeof(ambient_info_t));
+    // Decrypt the message containing the readings of a wireless station using
+    // the AES encryption module.
+    decrypt_nrf24_payload(
+        plain_text_ambient_info_payload,
+        message,
+        sizeof(float) * WIRELESS_STATION_DATA_FIELD_COUNT + AES_IV_COUNTER_SIZE,
+        aes_ctx,
+        aes_iv
+    );
 
-    memcpy(values_array, message, sizeof(ambient_info_t));
+    printf("Decrypted plain text bytes: \n");
+    for (int i = 0; i < sizeof(plain_text_ambient_info_payload); i++) {
+        printf("%x ", plain_text_ambient_info_payload[i]);
+    }
+    printf("\n\n");
 
+    // Copy the decrypted payload containing the representation in bytes of the
+    // station readings in an array of floats.
+    memcpy(
+        values_array,
+        plain_text_ambient_info_payload,
+        sizeof(float) * WIRELESS_STATION_DATA_FIELD_COUNT
+    );
+
+    // Assign the floats in array to their corresponding fields in the readings
+    // structure.
     received_readings->temperature = values_array[0];
     received_readings->humidity = values_array[1];
     received_readings->light_intensity = values_array[2];

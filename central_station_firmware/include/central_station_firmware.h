@@ -20,6 +20,7 @@
 #define NRF24_MAX_PACKET_SIZE 32
 #define NRF24_ADDRESS_SIZE 5
 #define NRF24_ADDRESSES_BUFFER_SIZE 6
+#define MAIN_LOOP_POLLING_PERIOD_MS 250
 #define HANDSHAKE_RETRANSMISSIONS 5
 #define HANDSHAKE_MAX_READ_LOOP_ITERATIONS 300
 #define TOUCH_BUTTON_PIN 7
@@ -108,7 +109,6 @@ typedef struct {
     struct mg_mgr *connection_manager;
     struct mg_connection *mqtt_connection;
     int8_t is_mqtt_connection_ready;
-    ambient_info_t environmental_readings;
 } network_ctx_t;
 
 typedef struct {
@@ -122,16 +122,6 @@ typedef struct {
     uint8_t display_turn;
     uint8_t turns_until_display_off;
 } display_timer_ctx_t;
-
-#ifndef TEST
-typedef struct {
-    struct bme68x_dev bme680_sensor;
-    struct bme68x_conf bme680_conf;
-    struct bme68x_heatr_conf bme680_heater_conf;
-    ssd1306_t *oled_display;
-    network_ctx_t network_context;
-} queue_entry_t;
-#endif
 
 
 /* FUNCTION DECLARATIONS */
@@ -186,13 +176,12 @@ void exit_handshake(
     uint8_t data_pipe_read,
     int8_t mappings_buffer_modified
 );
-void button_callback(uint gpio, uint32_t events);
 
 // Functions related to sensor readings.
 int8_t read_bme680_sensor(
-    struct bme68x_dev bme680_sensor,
-    struct bme68x_conf bme680_conf,
-    struct bme68x_heatr_conf bme680_heater_conf,
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf,
     ambient_info_t *reading
 );
 int8_t read_temperature_and_humidity(ambient_info_t *reading);
@@ -202,6 +191,11 @@ int8_t receive_station_readings(
     uint8_t message[],
     size_t message_size,
     uint8_t *incoming_packet_data_pipe
+);
+void handle_display_turn_update(
+    uint8_t turn,
+    ssd1306_t *oled_display,
+    ambient_info_t *station_readings
 );
 
 // Functions related to message encryption and decryption.

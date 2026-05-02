@@ -116,7 +116,7 @@ int main() {
 
     // Take environmental measurements once every minute.
     add_repeating_timer_ms(
-        10000,
+        20000,
         minute_timer_callback,
         NULL,
         &minute_timer
@@ -198,7 +198,12 @@ int main() {
             station_readings.air_pressure = 0;
             station_readings.air_quality_index = 0;
 
-            if (read_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf, &station_readings) == -1) {
+            if (read_bme680_sensor(
+                &bme680_sensor,
+                &bme680_conf,
+                &bme680_heater_conf,
+                &station_readings
+            ) == -1) {
                 printf("Error when reading the BME680 sensor measurements. Error number %d\n",
                     BME680_READ_ERROR);
             }

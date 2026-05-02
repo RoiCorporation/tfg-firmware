@@ -4,12 +4,12 @@
 #include "pico/rand.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
-#include "bme680_port.h"
 #include "central_station_firmware.h"
+#include "bme680_port.h"
 #include "utils.h"
+#include "callbacks.h"
+#include "oled_display.h"
 #include "ecdh.h"
-
-#include <stdio.h>
 
 
 /**
@@ -202,7 +202,7 @@ void initialize_nrf24_module(
         .retr_count = ARC_15RT,          // 2 packet retransmissions.
         .retr_delay = ARD_500US         // 500μS retransmission delay.
     };
-    
+
     nrf24_module->initialise(&nrf24_config);
     // nrf24_module->initialise(NULL);
     // nrf24_module->dyn_payloads_enable();
@@ -290,11 +290,12 @@ int8_t handshake(
     /* --------------------------------------------------------------------- */
     // Receive the first half of the wireless station's ECDH public key.
     
+    printf("REACHED 1\n");
     while (1) {
 
         // Check if any packets have been received.
         if (nrf24_module->is_packet(&data_pipe_read)) {
-
+            printf("data pipe read: %d\n", data_pipe_read);
             // If the address of the received packet corresponds to another
             // data pipe, read it to force a flush of the RX FIFO and allow
             // actual handshake-related packets to enter such FIFO.
@@ -318,6 +319,7 @@ int8_t handshake(
         }
         read_loop_iterations++;
         if (read_loop_iterations >= HANDSHAKE_MAX_READ_LOOP_ITERATIONS) {
+            printf("FAIL 1\n");
             exit_handshake(
                 nrf24_module,
                 associated_wireless_stations_info_map,
@@ -340,6 +342,7 @@ int8_t handshake(
     nrf24_module->standby_mode();
     sleep_ms(50);
 
+    printf("REACHED 2\n");
     // Send the packet with the first half of the station's ECDH public key.
     for (int i = 0; i < HANDSHAKE_RETRANSMISSIONS; i++) {
         nrf24_module->send_packet(ecdh_public_key, ECC_PUB_KEY_SIZE / 2);
@@ -353,6 +356,7 @@ int8_t handshake(
     nrf24_module->receiver_mode();
     sleep_ms(20);
 
+    printf("REACHED 3\n");
     while (1) {
 
         // Check if any packets have been received.
@@ -385,6 +389,7 @@ int8_t handshake(
                 data_pipe_read,
                 mappings_buffer_modified
             );
+            printf("FAIL 3\n");
             return (int8_t)-1;
         }
 
@@ -418,7 +423,8 @@ int8_t handshake(
     if (ecdh_shared_secret(
         ecdh_private_key,
         other_station_ecdh_public_key,
-        shared_secret) == 0)
+        shared_secret
+    ) == 0)
         return (int8_t)-1;
 
     // Invoke the KDF procedure to generate the AES encryption key that will be
@@ -805,17 +811,19 @@ void exit_handshake(
  * @brief Read temperature, humidity, air pressure and the Air Quality Index
  * (AQI) from the BME680 sensor.
  * 
- * @param bme680_sensor struct that acts as an instance of the sensor. 
- * @param bme680_conf struct for the sensor's configuration.
- * @param bme680_heater_conf struct for the configuration of the sensor's heater.
+ * @param bme680_sensor pointer to the struct that acts as an instance of the
+ * sensor. 
+ * @param bme680_conf pointer to the struct that holds the sensor's configuration.
+ * @param bme680_heater_conf pointer to the struct that holds the configuration
+ * of the sensor's heater.
  * @param reading pointer to an ambient_info_t struct where the read values will
  * be stored.
  * @return int8_t 0 if the reading was successful, -1 otherwise.
  */
 int8_t read_bme680_sensor(
-    struct bme68x_dev bme680_sensor,
-    struct bme68x_conf bme680_conf,
-    struct bme68x_heatr_conf bme680_heater_conf,
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf,
     ambient_info_t *reading
 ) {
     struct bme68x_data sensor_data_read;
@@ -824,10 +832,13 @@ int8_t read_bme680_sensor(
     uint8_t n_fields;
     int8_t reading_result;
 
-    bme68x_set_op_mode(BME68X_FORCED_MODE, &bme680_sensor);
-    del_period = bme68x_get_meas_dur(BME68X_FORCED_MODE, &bme680_conf, &bme680_sensor) + (bme680_heater_conf.heatr_dur * 1000);
-    bme680_sensor.delay_us(del_period, bme680_sensor.intf_ptr);
-    reading_result = bme68x_get_data(BME68X_FORCED_MODE, &sensor_data_read, &n_fields, &bme680_sensor);
+    bme68x_set_op_mode(BME68X_FORCED_MODE, bme680_sensor);
+    del_period = bme68x_get_meas_dur(
+        BME68X_FORCED_MODE,
+        bme680_conf, bme680_sensor) + (bme680_heater_conf->heatr_dur * 1000
+    );
+    bme680_sensor->delay_us(del_period, bme680_sensor->intf_ptr);
+    reading_result = bme68x_get_data(BME68X_FORCED_MODE, &sensor_data_read, &n_fields, bme680_sensor);
 
     if (n_fields && reading_result == BME68X_OK) {
         reading->temperature = sensor_data_read.temperature;
@@ -891,6 +902,76 @@ int8_t receive_station_readings(
             return (int8_t)-1;
         }
         return (int8_t)-1;
+    }
+}
+
+/**
+ * @brief Update the OLED display by calling the appropriate method to display
+ * the environmental reading that corresponds to the current turn.
+ *
+ * @param turn uint8_t current turn in the display sequence.
+ * @param oled_display pointer to the OLED display driver.
+ * @param station_readings pointer to the structure with the station readings
+ * to display.
+ */
+void handle_display_turn_update(
+    uint8_t turn,
+    ssd1306_t *oled_display,
+    ambient_info_t *station_readings
+) {
+    switch (turn) {
+        case 1:
+            display_temperature(
+                oled_display,
+                station_readings->temperature);
+            break;
+        case 2:
+            display_humidity(
+                oled_display,
+                station_readings->humidity);
+            break;
+        case 3:
+            display_light_intensity(
+                oled_display,
+                station_readings->light_intensity);
+            break;
+        case 4:
+            display_air_pressure(
+                oled_display,
+                station_readings->air_pressure);
+            break;
+        case 5:
+            display_air_quality_index(
+                oled_display,
+                station_readings->air_quality_index);
+            break;
+        case 6:
+            display_carbon_monoxide_concentration(
+                oled_display,
+                station_readings->carbon_monoxide_concentration);
+            break;
+        case 7:
+            display_methane_concentration(
+                oled_display,
+                station_readings->methane_concentration);
+            break;
+        case 8:
+            display_propane_concentration(
+                oled_display,
+                station_readings->propane_concentration);
+            break;
+        case 9:
+            display_alcohol_concentration(
+                oled_display,
+                station_readings->alcohol_concentration);
+            break;
+        case 10:
+            display_hydrogen_gas_concentration(
+                oled_display,
+                station_readings->hydrogen_gas_concentration);
+            break;
+        default:
+            break;
     }
 }
 
@@ -1004,12 +1085,6 @@ void decrypt_nrf24_payload(
         plain_text_payload,
         encrypted_payload_size - AES_IV_COUNTER_SIZE
     );
-
-    printf("DECRYPTED payload: ");
-    for (int i = 0; i < encrypted_payload_size - AES_IV_COUNTER_SIZE; i++) {
-        printf("%x ", plain_text_payload[i]);
-    }
-    printf("\n");
 }
 
 

@@ -5,7 +5,8 @@
 #include "pico/stdlib.h"
 
 
-extern button_action_t button_action;
+extern volatile button_action_t button_action;
+extern volatile uint8_t display_turn_update;
 extern absolute_time_t time_button_press;
 extern absolute_time_t time_button_release;
 

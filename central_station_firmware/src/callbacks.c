@@ -47,5 +47,7 @@ bool display_turn_timer_callback(__unused struct repeating_timer *t) {
 
     if (display_timer_ctx->turns_until_display_off > 0)
         display_timer_ctx->turns_until_display_off--;
+
+    display_turn_update = 1;
     return true;
 }

@@ -145,9 +145,9 @@ void button_callback(uint gpio, uint32_t events);
 
 // Functions related to sensor readings.
 int8_t read_bme680_sensor(
-    struct bme68x_dev bme680_sensor,
-    struct bme68x_conf bme680_conf,
-    struct bme68x_heatr_conf bme680_heater_conf,
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf,
     ambient_info_t *reading
 );
 int8_t read_temperature_and_humidity(ambient_info_t *reading);

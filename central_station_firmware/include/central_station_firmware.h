@@ -6,6 +6,7 @@
 #include "bme68x.h"
 #include "ssd1306.h"
 #include "nrf24_driver.h"
+#include "ecdh.h"
 #include "aes.h"
 #include "mongoose.h"
 #endif
@@ -13,10 +14,15 @@
 
 /* CONSTANTS*/
 #define AMBIENT_INFO_FIELD_COUNT (sizeof(ambient_info_t) - STATION_ID_CHAR_LENGTH - 3) / sizeof(float)
+#define WIRELESS_STATION_DATA_FIELD_COUNT 5
 #define STATION_ID_BYTES_LENGTH 16
 #define STATION_ID_CHAR_LENGTH 37
+#define NRF24_MAX_PACKET_SIZE 32
 #define NRF24_ADDRESS_SIZE 5
 #define NRF24_ADDRESSES_BUFFER_SIZE 6
+#define MAIN_LOOP_POLLING_PERIOD_MS 250
+#define HANDSHAKE_RETRANSMISSIONS 5
+#define HANDSHAKE_MAX_READ_LOOP_ITERATIONS 300
 #define TOUCH_BUTTON_PIN 7
 #define BUZZER_PIN 15
 #define MAX_TIMINGS 85
@@ -57,13 +63,24 @@
 #define CIPO_PIN 16
 #define SPI_BAUDRATE 5000000
 
-/* AES-256 CRT */
-static const uint8_t AES_256_KEY[32] = {
-    0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-    0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 
+/* KDF AND AES-256 CRT */
+#define KDF_SALT_SIZE 64
+#define AES_KEY_SIZE 32
+#define AES_IV_SIZE 16
+#define AES_IV_COUNTER_SIZE 4
+static uint8_t KDF_SALT[KDF_SALT_SIZE] = {
+    0x77, 0xe3, 0x3e, 0x8c, 0x26, 0x0d, 0x2c, 0x61,
+    0x60, 0x5c, 0x2c, 0x6c, 0xc2, 0x4a, 0xe6, 0x84, 
+    0x7a, 0x2c, 0x2c, 0x72, 0x8e, 0x73, 0x20, 0x59,
+    0x0c, 0xdb, 0xda, 0x76, 0xf2, 0x17, 0x75, 0xf9,
+    0x63, 0x53, 0x3a, 0xde, 0x2d, 0x96, 0x10, 0x1b,
+    0x94, 0x79, 0x10, 0x75, 0xe4, 0x70, 0x86, 0x3d,
+    0x23, 0x9b, 0xb5, 0x98, 0xec, 0x89, 0xb0, 0x4f,
+    0x23, 0x83, 0xfe, 0x1d, 0xe7, 0x3d, 0xce, 0x5b
 };
-static const uint8_t AES_256_IV[16] = { 
-    0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff 
+static uint8_t AES_256_IV[16] = { 
+    0x5a, 0x83, 0x95, 0x62, 0x3c, 0x7f, 0xa8, 0xf7,
+    0x38, 0x29, 0x9b, 0x3a, 0x3e, 0x7f, 0x43, 0x5d
 };
 
 /* ENUMS */
@@ -92,32 +109,25 @@ typedef struct {
     struct mg_mgr *connection_manager;
     struct mg_connection *mqtt_connection;
     int8_t is_mqtt_connection_ready;
-    ambient_info_t environmental_readings;
 } network_ctx_t;
 
+#ifndef TEST
 typedef struct {
     uint8_t nrf24l01_address[NRF24_ADDRESS_SIZE];
-    char *associated_station_id;
-} station_id_address_map_t;
+    char *station_id;
+    struct AES_ctx aes_ctx;
+    uint32_t aes_ctr_counter;
+} associated_wireless_station_info_t;
+#endif
 
 typedef struct {
     uint8_t display_turn;
     uint8_t turns_until_display_off;
 } display_timer_ctx_t;
 
-#ifndef TEST
-typedef struct {
-    struct bme68x_dev bme680_sensor;
-    struct bme68x_conf bme680_conf;
-    struct bme68x_heatr_conf bme680_heater_conf;
-    ssd1306_t *oled_display;
-    network_ctx_t network_context;
-} queue_entry_t;
-#endif
-
 
 /* FUNCTION DECLARATIONS */
-// Declarations for setup functions.
+// Functions for setup and configuration.
 #ifndef TEST
 void initialize_station(
     struct bme68x_dev *bme680_sensor,
@@ -125,7 +135,9 @@ void initialize_station(
     struct bme68x_heatr_conf *bme680_heater_conf,
     ssd1306_t *oled_display,
     nrf_client_t *nrf24_module,
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
+    uint8_t ecdh_private_key[],
+    uint8_t ecdh_public_key[],
     struct mg_mgr *connection_manager,
     uint8_t copi_pin,
     uint8_t cipo_pin,
@@ -142,7 +154,7 @@ void initialize_bme680_sensor(
 );
 void initialize_nrf24_module(
     nrf_client_t *nrf24_module,
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     uint8_t copi_pin,
     uint8_t cipo_pin,
     uint8_t sck_pin,
@@ -152,30 +164,62 @@ void initialize_nrf24_module(
 );
 int8_t handshake(
     nrf_client_t *nrf24_module,
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
+    uint8_t ecdh_private_key[],
+    uint8_t ecdh_public_key[],
+    uint8_t kdf_salt[],
+    uint8_t aes_iv[],
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
     size_t buffer_size
 );
-void button_callback(uint gpio, uint32_t events);
+void exit_handshake(
+    nrf_client_t *nrf24_module,
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
+    size_t buffer_size,
+    uint8_t data_pipe_read,
+    int8_t mappings_buffer_modified
+);
 
-// Declarations for functions related to sensor readings.
+// Functions related to sensor readings.
 int8_t read_bme680_sensor(
-    struct bme68x_dev bme680_sensor,
-    struct bme68x_conf bme680_conf,
-    struct bme68x_heatr_conf bme680_heater_conf,
+    struct bme68x_dev *bme680_sensor,
+    struct bme68x_conf *bme680_conf,
+    struct bme68x_heatr_conf *bme680_heater_conf,
     ambient_info_t *reading
 );
 int8_t read_temperature_and_humidity(ambient_info_t *reading);
 int8_t read_light_intensity(ambient_info_t *reading);
-int8_t receive_radio_message(
-    nrf_client_t nrf24_module,
+int8_t receive_station_readings(
+    nrf_client_t *nrf24_module,
     uint8_t message[],
+    size_t message_size,
     uint8_t *incoming_packet_data_pipe
+);
+void handle_display_turn_update(
+    uint8_t turn,
+    ssd1306_t *oled_display,
+    ambient_info_t *station_readings
+);
+
+// Functions related to message encryption and decryption.
+void encrypt_nrf24_payload(
+    uint8_t plain_text_payload[],
+    size_t plain_text_payload_size,
+    uint8_t encrypted_payload[],
+    struct AES_ctx *aes_ctx,
+    uint8_t aes_iv[],
+    uint32_t *aes_ctr_counter
+);
+void decrypt_nrf24_payload(
+    uint8_t plain_text_payload[],
+    uint8_t encrypted_payload[],
+    size_t encrypted_payload_size,
+    struct AES_ctx *aes_ctx,
+    uint8_t aes_iv[]
 );
 void decrypt_ambient_info_message(
     ambient_info_t *received_readings, 
-    struct AES_ctx aes_ctx, 
-    const uint8_t aes_key[], 
-    const uint8_t aes_iv[], 
+    struct AES_ctx *aes_ctx, 
+    uint8_t aes_iv[], 
     uint8_t message[]
 );
 #endif

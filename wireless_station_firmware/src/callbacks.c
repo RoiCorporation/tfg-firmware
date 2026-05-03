@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdbool.h>
 #include "wireless_station_firmware.h"
 #include "callbacks.h"
@@ -7,62 +6,42 @@
 
 
 /**
- * @brief Handle the button press and release actions. When the button is
- * released, calculate whether it was a short or a long press and activate
- * the OLED display and start the measurement-displaying sequence. If it was
- * a long press, invoke the handshake protocol as well.
+ * @brief Handle the button press and release actions, updating the state
+ * variable in charge of deciding which action the station must do next,
+ * according to the duration of the button pressed.
  * 
  * @param gpio GPIO pin whose state update triggered the callback.
- * @param events which type of event triggered the callback (
- * GPIO_IRQ_EDGE_RISE when pressing the button and GPIO_IRQ_EDGE_FALL when
- * releasing it).
+ * @param events which type of event triggered the callback.
  */
 void button_callback(uint gpio, uint32_t events) {
     if (events & GPIO_IRQ_EDGE_RISE) {
         time_button_press = get_absolute_time();
     }
     else if (events & GPIO_IRQ_EDGE_FALL) {
+        button_action = TURN_ON_DISPLAY;
+        button_event_pending = 1;
         time_button_release = get_absolute_time();
         uint32_t elapsed_time_ms = (
             to_ms_since_boot(time_button_release) -
             to_ms_since_boot(time_button_press)
         );
 
-        // Whether it was a short or a long press, start the OLED display
-        // sequence by restarting the timer that controls it and resetting
-        // its control variables.
-        cancel_repeating_timer(&display_turn_change_timer);
-
-        display_timer_ctx.display_turn = 1;
-        display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
-        ssd1306_poweron(display_timer_ctx.oled_display);
-        add_repeating_timer_ms(
-            3000,
-            display_turn_timer_callback,
-            NULL,
-            &display_turn_change_timer
-        );
-
-        // If it was a long press, invoke the handshake protocol to associate this
-        // wireless station with a central one.
-        if (elapsed_time_ms >= BUTTON_PRESS_DELAY_FOR_HANDSHAKE_MS) {
-            ssd1306_draw_string(button_ctx.oled_display, 0, 0, 1, "Connecting to station");
-            ssd1306_show(button_ctx.oled_display);
-
-            // Start the handshake procedure.
-            int8_t handshake_result = handshake(button_ctx.nrf24_module);
-
-            // If the handshake procedure failed, print an appropriate error message.
-            if (handshake_result != 0) {
-                printf("Error on the handshake when associating a wireless station. Error number %d\n",
-                    HANDSHAKE_ERROR);
-                ssd1306_draw_string(button_ctx.oled_display, 0, 16, 1, "An error occurred");
-                ssd1306_draw_string(button_ctx.oled_display, 0, 32, 1, "trying to connect to");
-                ssd1306_draw_string(button_ctx.oled_display, 0, 48, 1, "a central station.");
-                ssd1306_show(button_ctx.oled_display);
-            }
-        }
+        if (elapsed_time_ms >= BUTTON_PRESS_DELAY_FOR_HANDSHAKE_MS)
+            button_action = START_HANDSHAKE;
     }
+}
+
+
+/**
+ * @brief Callback for the minute timer that orders the station to make
+ * its sensors take their environmental readings again.
+ *
+ * @param t unused pointer.
+ * @return true this method always returns true.
+ */
+bool minute_timer_callback(__unused struct repeating_timer *t) {
+    minute_task_pending = 1;
+    return true;
 }
 
 

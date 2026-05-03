@@ -2,6 +2,7 @@
 #include <string.h>
 #include "pico/rand.h"
 #include "utils.h"
+#include "monocypher.h"
 
 
 /**
@@ -21,62 +22,6 @@ int8_t hex_value(char c) {
         return (int8_t)(c - 'A' + 10);
 
     return (int8_t)-1;
-}
-
-
-/**
- * @brief Initialize the buffer that maps each associated station ID with
- * the particular address of each NRF24L01 module data pipe. Those addresses
- * are generated randomly in this method, ensuring no two of them match.
- * 
- * @param station_id_to_nrf24_address_buffer structure that stores the mapping
- * between the ID of each of the associated wireless stations and their respective
- * receiving address in this central station's NRF24 module.
- * @param buffer_size amount of data pipes of the module, should be 6.
- * @param address_size length (in bytes) of the addresses, should be 5.
- */
-void initialize_station_id_to_address_buffer(
-    station_id_address_map_t station_id_to_nrf24_address_buffer[],
-    size_t buffer_size,
-    size_t address_size
-) {
-    
-    // Position inside an address array of the Least Significant Byte (LSB).
-    uint8_t lsb_pos = address_size - 1;
-
-    // Initialize all the station ID slots available to NULL.
-    for (int i = 0; i < buffer_size; i++)
-        station_id_to_nrf24_address_buffer[i].associated_station_id = NULL;
-    
-    // Array of size 256 that marks which bytes have been selected randomly for
-    // the LSB of each address. It's used after generating all addresses to ensure
-    // that no two of them are equal and that all of their LSBs are different.
-    uint8_t lsbs_generated[256] = { 0x00 };
-
-    // Initialize all addresses.
-    for (int i = 0; i < buffer_size; i++) {
-
-        // Generate the full addresses for the first two data pipes (data pipes 0 and 1).
-        if (i < 2) {
-            for (int j = 0; j < address_size; j++)
-                station_id_to_nrf24_address_buffer[i].nrf24l01_address[j] = (uint8_t)get_rand_32();
-        }
-
-        // For the remaining data pipes, only generate the LSB.
-        else {
-            station_id_to_nrf24_address_buffer[i].nrf24l01_address[lsb_pos] = (uint8_t)get_rand_32();
-        }
-
-        // If the LSB of the current address isn't equal to another address' LSB,
-        // mark it as assigned in the marks array. In any other case, repeat this
-        // iteration to generate a new full address or LSB, depending on which
-        // data pipe the address is for.
-        uint8_t lsb_value_before = lsbs_generated[station_id_to_nrf24_address_buffer[i].nrf24l01_address[lsb_pos]];
-        if (lsb_value_before != 0)
-            i--;
-        else
-            lsbs_generated[station_id_to_nrf24_address_buffer[i].nrf24l01_address[lsb_pos]] = 1;
-    }
 }
 
 
@@ -129,6 +74,127 @@ int8_t hex_string_to_bytes(const char *hex, uint8_t *out, size_t out_size) {
     }
 
     return (int8_t)j;
+}
+
+
+/**
+ * @brief Initialize the buffer that will store the necessary data regarding
+ * the wireless stations that are associated with a central one, such as their
+ * ID or their NRF24L01 destination address, among others. NRF24L01 addresses
+ * are generated randomly in this method, ensuring no two of them match.
+ * 
+ * @param associated_wireless_stations_info_map buffer that maps all the necessary
+ * information of every wireless station associated with a central one.
+ * @param buffer_size amount of data pipes of the module, should be 6.
+ * @param address_size length (in bytes) of the addresses, should be 5.
+ */
+void initialize_associated_station_info_map(
+    associated_wireless_station_info_t associated_wireless_stations_info_map[],
+    size_t buffer_size,
+    size_t address_size
+) {
+    
+    // Position inside an address array of the Least Significant Byte (LSB).
+    uint8_t lsb_pos = address_size - 1;
+
+    // Initialize all the station ID slots available to NULL and the AES
+    // counters used for encryption to 0.
+    for (int i = 0; i < buffer_size; i++) {
+        associated_wireless_stations_info_map[i].station_id = NULL;
+        associated_wireless_stations_info_map[i].aes_ctr_counter = 0;
+    }
+    
+    // Array of size 256 that marks which bytes have been selected randomly for
+    // the LSB of each address. It's used after generating all addresses to ensure
+    // that no two of them are equal and that all of their LSBs are different.
+    uint8_t lsbs_generated[256] = { 0x00 };
+
+    // Initialize all addresses.
+    for (int i = 0; i < buffer_size; i++) {
+
+        // Generate the full addresses for the first two data pipes (data pipes 0 and 1).
+        if (i < 2) {
+            for (int j = 0; j < address_size; j++)
+                associated_wireless_stations_info_map[i].nrf24l01_address[j] = (uint8_t)get_rand_32();
+        }
+
+        // For the remaining data pipes, only generate the LSB.
+        else {
+            associated_wireless_stations_info_map[i].nrf24l01_address[lsb_pos] = (uint8_t)get_rand_32();
+        }
+
+        // If the LSB of the current address isn't equal to another address' LSB,
+        // mark it as assigned in the marks array. In any other case, repeat this
+        // iteration to generate a new full address or LSB, depending on which
+        // data pipe the address is for.
+        uint8_t lsb_value_before = lsbs_generated[associated_wireless_stations_info_map[i].nrf24l01_address[lsb_pos]];
+        if (lsb_value_before != 0)
+            i--;
+        else
+            lsbs_generated[associated_wireless_stations_info_map[i].nrf24l01_address[lsb_pos]] = 1;
+    }
+}
+
+
+/**
+ * @brief Convert a uint32_t value into an array containing its 4 bytes.
+ * 
+ * @param value uint32_t number to convert to an array.
+ * @param array uint8_t array that will store the bytes that make up the value
+ * passed. Its size must be 4 and the bytes are arranged in big-endian.
+ */
+void uint32_to_u8_be(uint32_t value, uint8_t array[]) {
+    array[0] = (uint8_t)((value >> 24) & 0xff);
+    array[1] = (uint8_t)((value >> 16) & 0xff);
+    array[2] = (uint8_t)((value >> 8)  & 0xff);
+    array[3] = (uint8_t)( value        & 0xff);
+}
+
+
+/**
+ * @brief Key-Derivation Function used to create a key for the AES encryption
+ * module from the shared secret generated after the ECDH key exchange.
+ * 
+ * @param output_key uint8_t array that will contain the generated key.
+ * @param output_key_size size_t size of the key in bytes.
+ * @param shared_secret uint8_t array that contains the shared secret generated
+ * after the ECDH key exchange.
+ * @param shared_secret_size size_t size of the shared secret in bytes.
+ * @param salt uint8_t array containing the salt used to increase the randomness
+ * of the generated key.
+ * @param salt_size size_t size of the salt in bytes.
+ */
+void kdf(
+    uint8_t output_key[],
+    size_t output_key_size,
+    uint8_t shared_secret[],
+    size_t shared_secret_size,
+    uint8_t salt[],
+    size_t salt_size
+){
+    // Nonce must be 8 bytes.
+    uint8_t chacha_nonce[8] = {'I', '5', 'S', 'K', 'L', 'Y', '0', '8'};
+
+	// Extract.
+	uint8_t prk[32];
+	crypto_blake2b_keyed(
+        prk,
+        sizeof(prk),
+        salt,
+        salt_size,
+        shared_secret,
+        shared_secret_size
+    );
+
+	// Expand.
+	crypto_chacha20_djb(
+        output_key,
+        NULL,
+        output_key_size,
+        prk,
+        chacha_nonce,
+        0
+    );
 }
 
 

@@ -45,6 +45,7 @@ add_executable(${PROJECT_NAME}
     src/utils.c
     src/oled_display.c
     lib/pico-ssd1306/ssd1306.c
+    src/monocypher.c
 )
 
 pico_set_program_name(${PROJECT_NAME} "${PROJECT_NAME}")
@@ -61,8 +62,10 @@ target_link_libraries(${PROJECT_NAME}
     hardware_i2c
     hardware_pio
     hardware_pwm
+    pico_rand
     BME68x_SensorAPI
     nrf24_driver
+    tiny-ECDH-c
     tiny-aes
 )
 
@@ -76,6 +79,7 @@ target_include_directories(${PROJECT_NAME}
     ${CMAKE_CURRENT_LIST_DIR}/include
     ${CMAKE_CURRENT_LIST_DIR}/lib/BME68x_SensorAPI/
     ${CMAKE_CURRENT_LIST_DIR}/lib/pico-nrf24-driver/lib/nrf24l01/
+    ${CMAKE_CURRENT_LIST_DIR}/lib/tiny-ECDH-c/
     ${CMAKE_CURRENT_LIST_DIR}/lib/tiny-AES-c/
     ${CMAKE_CURRENT_LIST_DIR}/lib/pico-ssd1306/
 )
@@ -88,6 +92,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 # Add subdirectories to the build
 add_subdirectory(lib/pico-nrf24-driver/lib)
+add_subdirectory(lib/tiny-ECDH-c)
 add_subdirectory(lib/tiny-AES-c)
 
 pico_add_extra_outputs(${PROJECT_NAME})

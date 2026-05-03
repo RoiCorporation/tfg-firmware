@@ -6,7 +6,7 @@
 /**
  * @brief Handle the button press and release actions, updating the state
  * variable in charge of deciding which action the station must do next,
- * according to how long the button was pressed for.
+ * according to the duration of the button pressed.
  * 
  * @param gpio GPIO pin whose state update triggered the callback.
  * @param events which type of event triggered the callback.
@@ -47,5 +47,7 @@ bool display_turn_timer_callback(__unused struct repeating_timer *t) {
 
     if (display_timer_ctx->turns_until_display_off > 0)
         display_timer_ctx->turns_until_display_off--;
+
+    display_turn_update = 1;
     return true;
 }

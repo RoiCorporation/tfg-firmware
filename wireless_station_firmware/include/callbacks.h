@@ -13,7 +13,7 @@ extern struct repeating_timer display_turn_change_timer;
 extern display_timer_ctx_t display_timer_ctx;
 extern volatile uint8_t button_event_pending;
 extern volatile uint8_t minute_task_pending;
-extern button_action_t button_action;
+extern volatile button_action_t button_action;
 
 
 void button_callback(uint gpio, uint32_t events);

@@ -1,10 +1,16 @@
 #include <math.h>
 #include <string.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include "pico/stdlib.h"
 #include "pico/rand.h"
+#include "pico/cyw43_arch.h"
+#include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
+#include "hardware/powman.h"
 #include "wireless_station_firmware.h"
+#include "callbacks.h"
 #include "bme680_port.h"
 #include "utils.h"
 #include "ecdh.h"
@@ -12,11 +18,13 @@
 #include <stdio.h>
 
 
-extern uint8_t button_event_pending;
-extern uint8_t minute_task_pending;
+extern volatile uint8_t button_event_pending;
+extern volatile uint8_t minute_task_pending;
 extern uint32_t aes_ctr_counter;
-extern int8_t has_associated_central_station;
-extern button_action_t button_action;
+extern volatile int8_t has_associated_central_station;
+extern volatile button_action_t button_action;
+static powman_power_state off_state;
+static powman_power_state on_state;
 
 
 /**
@@ -68,6 +76,8 @@ void initialize_station(
     stdio_init_all();
     initialize_i2c_bus();
     sleep_ms(200);
+    cyw43_arch_deinit(); // Not used by this type of station.
+
     initialize_bme680_sensor(bme680_sensor, bme680_conf, bme680_heater_conf);
     oled_display->external_vcc=false;
     ssd1306_init(oled_display, 128, 64, OLED_DISPLAY_I2C_ADDRESS, i2c0);
@@ -557,6 +567,53 @@ void exit_handshake(nrf_client_t *nrf24_module) {
     sleep_ms(300);
 }
 
+
+int8_t turn_low_power_on(void) {
+    printf("GOING INTO LOW POWER\n");
+    stdio_flush();
+
+    // Optional but recommended for measurement:
+    stdio_deinit_all();
+
+    // Turn off WiFi chip on Pico 2 W
+    cyw43_arch_deinit();
+
+    gpio_init(23);
+    gpio_set_dir(23, GPIO_OUT);
+    gpio_put(23, 0);
+
+    // OLED/display off here
+    // ssd1306_send_command(0xAE);
+
+    // GPIO wake
+    gpio_init(TOUCH_BUTTON_PIN);
+    gpio_set_dir(TOUCH_BUTTON_PIN, GPIO_IN);
+    gpio_pull_up(TOUCH_BUTTON_PIN);
+
+    while (!gpio_get(TOUCH_BUTTON_PIN)) {
+        sleep_ms(10);
+    }
+
+    powman_enable_gpio_wakeup(0, TOUCH_BUTTON_PIN, false, false);
+
+    // Alarm wake: 10 seconds from now
+    powman_enable_alarm_wakeup_at_ms(powman_timer_get_ms() + 10000);
+
+    bool valid_state = powman_configure_wakeup_state(off_state, on_state);
+    if (!valid_state) {
+        return -1;
+    }
+
+    powman_hw->boot[0] = 0;
+    powman_hw->boot[1] = 0;
+    powman_hw->boot[2] = 0;
+    powman_hw->boot[3] = 0;
+
+    int rc = powman_set_power_state(off_state);
+    if (rc != 0) {
+        return -1;
+    }
+}
 
 /**
  * @brief Read temperature, humidity, air pressure and the Air Quality Index

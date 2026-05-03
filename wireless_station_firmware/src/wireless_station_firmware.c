@@ -5,6 +5,7 @@
 #include "pico/time.h"
 #include "hardware/i2c.h"
 #include "hardware/sync.h"
+#include "hardware/powman.h"
 #include "ssd1306.h"
 #include "oled_display.h"
 #include "wireless_station_firmware.h"
@@ -21,8 +22,8 @@ display_timer_ctx_t display_timer_ctx;
 volatile uint8_t button_event_pending;
 volatile uint8_t minute_task_pending;
 volatile int8_t has_associated_central_station;
-volatile uint32_t aes_ctr_counter;
-button_action_t button_action;
+uint32_t aes_ctr_counter;
+volatile button_action_t button_action;
 
 
 int main() {
@@ -110,7 +111,7 @@ int main() {
 
     // Take environmental measurements once every minute.
     add_repeating_timer_ms(
-        20000,
+        10000,
         minute_timer_callback,
         NULL,
         &minute_timer
@@ -250,6 +251,7 @@ int main() {
                     printf("Packet transmitted successfully.\n");
             }
         }
+        turn_low_power_on();
 
         // Wait until the next interrupt occurs.
         __wfi();

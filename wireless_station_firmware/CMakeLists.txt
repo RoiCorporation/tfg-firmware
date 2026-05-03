@@ -59,10 +59,12 @@ pico_enable_stdio_usb(${PROJECT_NAME} 1)
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
     pico_stdlib
+    pico_cyw43_arch_none
+    pico_rand
     hardware_i2c
     hardware_pio
     hardware_pwm
-    pico_rand
+    hardware_powman
     BME68x_SensorAPI
     nrf24_driver
     tiny-ECDH-c

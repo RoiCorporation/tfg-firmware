@@ -66,7 +66,6 @@ target_link_libraries(${PROJECT_NAME}
     pico_rand
     pico_bootrom
     pico_mbedtls
-    pico_multicore
     hardware_flash
     BME68x_SensorAPI
     nrf24_driver

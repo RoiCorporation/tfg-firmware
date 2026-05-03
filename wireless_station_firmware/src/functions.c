@@ -11,7 +11,12 @@
 
 #include <stdio.h>
 
+
+extern uint8_t button_event_pending;
+extern uint8_t minute_task_pending;
 extern uint32_t aes_ctr_counter;
+extern int8_t has_associated_central_station;
+extern button_action_t button_action;
 
 
 /**
@@ -51,6 +56,15 @@ void initialize_station(
     uint8_t ce_pin,
     uint32_t spi_baudrate
 ) {
+
+    // Initialize the global variables.
+    button_action = NO_ACTION;
+    button_event_pending = 0;
+    minute_task_pending = 0;
+    aes_ctr_counter = 0;
+    has_associated_central_station = -1;
+
+    // Configure every component, protocol, GPIO,...
     stdio_init_all();
     initialize_i2c_bus();
     sleep_ms(200);

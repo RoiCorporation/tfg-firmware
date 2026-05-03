@@ -5,6 +5,7 @@
 #include "pico/stdlib.h"
 
 
+/* GLOBAL VARIABLES */
 extern volatile button_action_t button_action;
 extern volatile uint8_t display_turn_update;
 extern absolute_time_t time_button_press;

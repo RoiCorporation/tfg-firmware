@@ -88,12 +88,6 @@ int main() {
     );
     sleep_ms(1000);
 
-    button_action = NO_ACTION;
-    button_event_pending = 0;
-    minute_task_pending = 0;
-    aes_ctr_counter = 0;
-    has_associated_central_station = -1;
-
     // Initialize the context structures of both callbacks.
     display_timer_ctx = (display_timer_ctx_t){
         .display_turn = 1,
@@ -135,6 +129,7 @@ int main() {
             display_timer_ctx.display_turn = 1;
             display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
             ssd1306_poweron(display_timer_ctx.oled_display);
+            display_turn_timer_callback(&display_turn_change_timer);
             add_repeating_timer_ms(
                 3000,
                 display_turn_timer_callback,

@@ -6,7 +6,7 @@
 /**
  * @brief Handle the button press and release actions, updating the state
  * variable in charge of deciding which action the station must do next,
- * according to how long the button was pressed for.
+ * according to the duration of the button pressed.
  * 
  * @param gpio GPIO pin whose state update triggered the callback.
  * @param events which type of event triggered the callback.

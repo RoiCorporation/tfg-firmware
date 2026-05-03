@@ -16,8 +16,8 @@ extern volatile uint8_t minute_task_pending;
 extern button_action_t button_action;
 
 
-bool minute_timer_callback(__unused struct repeating_timer *t);
 void button_callback(uint gpio, uint32_t events);
+bool minute_timer_callback(__unused struct repeating_timer *t);
 bool display_turn_timer_callback(__unused struct repeating_timer *t);
 
 

@@ -111,12 +111,14 @@ typedef struct {
     int8_t is_mqtt_connection_ready;
 } network_ctx_t;
 
+#ifndef TEST
 typedef struct {
     uint8_t nrf24l01_address[NRF24_ADDRESS_SIZE];
     char *station_id;
     struct AES_ctx aes_ctx;
     uint32_t aes_ctr_counter;
 } associated_wireless_station_info_t;
+#endif
 
 typedef struct {
     uint8_t display_turn;

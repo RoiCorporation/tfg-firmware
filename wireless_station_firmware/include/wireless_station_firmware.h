@@ -141,7 +141,7 @@ int8_t handshake(
     uint8_t aes_iv[]
 );
 void exit_handshake(nrf_client_t *nrf24_module);
-int8_t turn_low_power_on();
+void hibernate();
 
 // Functions related to sensor readings.
 int8_t read_bme680_sensor(

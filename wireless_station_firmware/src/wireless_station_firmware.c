@@ -2,9 +2,9 @@
 #include <math.h>
 #include <string.h>
 #include "pico/stdlib.h"
-#include "pico/time.h"
 #include "hardware/i2c.h"
 #include "hardware/sync.h"
+#include "hardware/gpio.h"
 #include "hardware/powman.h"
 #include "ssd1306.h"
 #include "oled_display.h"
@@ -20,7 +20,6 @@ struct repeating_timer display_turn_change_timer;
 button_ctx_t button_ctx;
 display_timer_ctx_t display_timer_ctx;
 volatile uint8_t button_event_pending;
-volatile uint8_t minute_task_pending;
 volatile int8_t has_associated_central_station;
 uint32_t aes_ctr_counter;
 volatile button_action_t button_action;
@@ -30,7 +29,6 @@ int main() {
 
     /* Variables */
     absolute_time_t next_minute_run;
-    struct repeating_timer minute_timer;
 
     // ECDH variables.
     uint8_t ecdh_private_key[ECC_PRV_KEY_SIZE];
@@ -87,7 +85,8 @@ int main() {
         CE_PIN,
         SPI_BAUDRATE
     );
-    sleep_ms(1000);
+    sleep_ms(1500);
+    printf("STARTED MAIN\n");
 
     // Initialize the context structures of both callbacks.
     display_timer_ctx = (display_timer_ctx_t){
@@ -101,26 +100,9 @@ int main() {
         .oled_display = &oled_display
     };
 
-    // Update the information on the display every 3 seconds.
-    add_repeating_timer_ms(
-        3000,
-        display_turn_timer_callback,
-        NULL,
-        &display_turn_change_timer
-    );
-
-    // Take environmental measurements once every minute.
-    add_repeating_timer_ms(
-        10000,
-        minute_timer_callback,
-        NULL,
-        &minute_timer
-    );
-    
     while (1) {
 
-        if (button_event_pending) {
-            button_event_pending = 0;
+        if (button_event_pending == 1) {
 
             // Whether it was a short or a long press, start the OLED display
             // sequence by restarting the timer that controls it and resetting
@@ -139,6 +121,7 @@ int main() {
             );
 
             if (button_action == START_HANDSHAKE) {
+                printf("HANDSHAKE\n");
                 ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to station");
                 ssd1306_show(&oled_display);
                 
@@ -181,80 +164,76 @@ int main() {
 
             button_action = NO_ACTION;
         }
-
-        if (minute_task_pending == 1) {
-
-            minute_task_pending = 0;
-
-            tight_loop_contents();
             
-            station_readings.temperature = 0;
-            station_readings.humidity = 0;
-            station_readings.light_intensity = 0;
-            station_readings.air_pressure = 0;
-            station_readings.air_quality_index = 0;
+        station_readings.temperature = 0;
+        station_readings.humidity = 0;
+        station_readings.light_intensity = 0;
+        station_readings.air_pressure = 0;
+        station_readings.air_quality_index = 0;
 
-            if (read_bme680_sensor(
-                &bme680_sensor,
-                &bme680_conf,
-                &bme680_heater_conf,
-                &station_readings
-            ) == -1) {
-                printf("Error when reading the BME680 sensor measurements. Error number %d\n",
-                    BME680_READ_ERROR);
-            }
-            else {
-                printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, AQI (ohm) %f\n", station_readings.temperature, 
-                    station_readings.humidity, station_readings.air_pressure, 
-                    station_readings.air_quality_index);
-            }
-
-            if (read_light_intensity(&station_readings) == -1) {
-                printf("Error when reading the light intensity sensor. Error number %d\n",
-                    LIGHT_SENSOR_READ_ERROR);
-            }
-            else {
-                printf("Light intensity: %.2f\n", station_readings.light_intensity);
-            }
-
-            //TODO: change this when we find a way to actually calculate the correct AQI.
-            station_readings.air_quality_index = 80;
-
-            for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
-                previous_readings[i] = previous_readings[i + 1];
-            }
-            previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY - 1] = station_readings;
-
-            int hazard_code = analyze_hazards(previous_readings);
-            if (hazard_code != 0) {
-                printf("Potential hazard detected! Code: %d\n", hazard_code);
-                activate_hazard_alert(hazard_code);
-            }
-
-            if (has_associated_central_station == 0) {
-                encrypt_ambient_info_message(
-                    &station_readings,
-                    &aes_ctx,
-                    AES_256_IV,
-                    radio_message
-                );
-
-                if (transmit_station_readings(
-                    &nrf24_module,
-                    radio_message,
-                    sizeof(radio_message)
-                ) == -1) {
-                    printf("Error when sending the sensor readings. Error number %d\n", 
-                        DATA_TRANSMIT_ERROR);
-                }
-                else
-                    printf("Packet transmitted successfully.\n");
-            }
+        if (read_bme680_sensor(
+            &bme680_sensor,
+            &bme680_conf,
+            &bme680_heater_conf,
+            &station_readings
+        ) == -1) {
+            printf("Error when reading the BME680 sensor measurements. Error number %d\n",
+                BME680_READ_ERROR);
         }
-        turn_low_power_on();
+        else {
+            printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, AQI (ohm) %f\n", station_readings.temperature, 
+                station_readings.humidity, station_readings.air_pressure, 
+                station_readings.air_quality_index);
+        }
 
-        // Wait until the next interrupt occurs.
-        __wfi();
+        if (read_light_intensity(&station_readings) == -1) {
+            printf("Error when reading the light intensity sensor. Error number %d\n",
+                LIGHT_SENSOR_READ_ERROR);
+        }
+        else {
+            printf("Light intensity: %.2f\n", station_readings.light_intensity);
+        }
+
+        //TODO: change this when we find a way to actually calculate the correct AQI.
+        station_readings.air_quality_index = 80;
+
+        for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {
+            previous_readings[i] = previous_readings[i + 1];
+        }
+        previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY - 1] = station_readings;
+
+        int hazard_code = analyze_hazards(previous_readings);
+        if (hazard_code != 0) {
+            printf("Potential hazard detected! Code: %d\n", hazard_code);
+            activate_hazard_alert(hazard_code);
+        }
+
+        if (has_associated_central_station == 0) {
+            encrypt_ambient_info_message(
+                &station_readings,
+                &aes_ctx,
+                AES_256_IV,
+                radio_message
+            );
+
+            if (transmit_station_readings(
+                &nrf24_module,
+                radio_message,
+                sizeof(radio_message)
+            ) == -1) {
+                printf("Error when sending the sensor readings. Error number %d\n", 
+                    DATA_TRANSMIT_ERROR);
+            }
+            else
+                printf("Packet transmitted successfully.\n");
+        }
+
+        while (button_event_pending != 0) sleep_ms(500);
+
+        ssd1306_clear(&oled_display);
+        ssd1306_show(&oled_display);
+        ssd1306_poweroff(&oled_display);
+        hibernate();
     }
 
 }

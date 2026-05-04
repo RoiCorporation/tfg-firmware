@@ -8,23 +8,21 @@
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
-#include "hardware/powman.h"
 #include "wireless_station_firmware.h"
 #include "callbacks.h"
 #include "bme680_port.h"
 #include "utils.h"
 #include "ecdh.h"
+#include "low_power.h"
+
 
 #include <stdio.h>
 
 
 extern volatile uint8_t button_event_pending;
-extern volatile uint8_t minute_task_pending;
 extern uint32_t aes_ctr_counter;
 extern volatile int8_t has_associated_central_station;
 extern volatile button_action_t button_action;
-static powman_power_state off_state;
-static powman_power_state on_state;
 
 
 /**
@@ -67,8 +65,7 @@ void initialize_station(
 
     // Initialize the global variables.
     button_action = NO_ACTION;
-    button_event_pending = 0;
-    minute_task_pending = 0;
+    button_event_pending = 1;
     aes_ctr_counter = 0;
     has_associated_central_station = -1;
 
@@ -568,52 +565,11 @@ void exit_handshake(nrf_client_t *nrf24_module) {
 }
 
 
-int8_t turn_low_power_on(void) {
+void hibernate() {
     printf("GOING INTO LOW POWER\n");
-    stdio_flush();
-
-    // Optional but recommended for measurement:
-    stdio_deinit_all();
-
-    // Turn off WiFi chip on Pico 2 W
-    cyw43_arch_deinit();
-
-    gpio_init(23);
-    gpio_set_dir(23, GPIO_OUT);
-    gpio_put(23, 0);
-
-    // OLED/display off here
-    // ssd1306_send_command(0xAE);
-
-    // GPIO wake
-    gpio_init(TOUCH_BUTTON_PIN);
-    gpio_set_dir(TOUCH_BUTTON_PIN, GPIO_IN);
-    gpio_pull_up(TOUCH_BUTTON_PIN);
-
-    while (!gpio_get(TOUCH_BUTTON_PIN)) {
-        sleep_ms(10);
-    }
-
-    powman_enable_gpio_wakeup(0, TOUCH_BUTTON_PIN, false, false);
-
-    // Alarm wake: 10 seconds from now
-    powman_enable_alarm_wakeup_at_ms(powman_timer_get_ms() + 10000);
-
-    bool valid_state = powman_configure_wakeup_state(off_state, on_state);
-    if (!valid_state) {
-        return -1;
-    }
-
-    powman_hw->boot[0] = 0;
-    powman_hw->boot[1] = 0;
-    powman_hw->boot[2] = 0;
-    powman_hw->boot[3] = 0;
-
-    int rc = powman_set_power_state(off_state);
-    if (rc != 0) {
-        return -1;
-    }
+    turn_low_power_on();
 }
+
 
 /**
  * @brief Read temperature, humidity, air pressure and the Air Quality Index

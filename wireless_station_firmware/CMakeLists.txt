@@ -46,6 +46,7 @@ add_executable(${PROJECT_NAME}
     src/oled_display.c
     lib/pico-ssd1306/ssd1306.c
     src/monocypher.c
+    src/low_power.c
 )
 
 pico_set_program_name(${PROJECT_NAME} "${PROJECT_NAME}")
@@ -65,6 +66,8 @@ target_link_libraries(${PROJECT_NAME}
     hardware_pio
     hardware_pwm
     hardware_powman
+    hardware_clocks
+    pico_multicore
     BME68x_SensorAPI
     nrf24_driver
     tiny-ECDH-c

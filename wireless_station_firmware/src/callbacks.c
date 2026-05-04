@@ -4,6 +4,8 @@
 #include "errors.h"
 #include "oled_display.h"
 
+#include <stdio.h>
+
 
 /**
  * @brief Handle the button press and release actions, updating the state
@@ -18,6 +20,7 @@ void button_callback(uint gpio, uint32_t events) {
         time_button_press = get_absolute_time();
     }
     else if (events & GPIO_IRQ_EDGE_FALL) {
+        printf("EVENT\n");
         button_action = TURN_ON_DISPLAY;
         button_event_pending = 1;
         time_button_release = get_absolute_time();
@@ -29,19 +32,6 @@ void button_callback(uint gpio, uint32_t events) {
         if (elapsed_time_ms >= BUTTON_PRESS_DELAY_FOR_HANDSHAKE_MS)
             button_action = START_HANDSHAKE;
     }
-}
-
-
-/**
- * @brief Callback for the minute timer that orders the station to make
- * its sensors take their environmental readings again.
- *
- * @param t unused pointer.
- * @return true this method always returns true.
- */
-bool minute_timer_callback(__unused struct repeating_timer *t) {
-    minute_task_pending = 1;
-    return true;
 }
 
 
@@ -99,10 +89,8 @@ bool display_turn_timer_callback(__unused struct repeating_timer *t) {
     if (display_timer_ctx.turns_until_display_off > 0)
         display_timer_ctx.turns_until_display_off--;
     else {
+        button_event_pending = 0;
         cancel_repeating_timer(&display_turn_change_timer);
-        ssd1306_clear(display_timer_ctx.oled_display);
-        ssd1306_show(display_timer_ctx.oled_display);
-        ssd1306_poweroff(display_timer_ctx.oled_display);
     }
 
     return true;

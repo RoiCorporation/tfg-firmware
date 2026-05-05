@@ -96,6 +96,14 @@ typedef struct {
     ssd1306_t *oled_display;
     ambient_info_t *station_readings;
 } display_timer_ctx_t;
+
+typedef struct {
+    uint8_t is_first_execution;
+    uint32_t count;
+    ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
+} retained_data_t;
+
+extern retained_data_t retained;
 #endif
 
 

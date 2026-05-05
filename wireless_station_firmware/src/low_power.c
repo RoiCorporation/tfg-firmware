@@ -14,7 +14,9 @@ void init_powman_states(void) {
     powman_timer_set_1khz_tick_source_lposc();
 
     off_state = POWMAN_POWER_STATE_NONE;
-
+    off_state = powman_power_state_with_domain_on(off_state, POWMAN_POWER_DOMAIN_SRAM_BANK0);
+    off_state = powman_power_state_with_domain_on(off_state, POWMAN_POWER_DOMAIN_SRAM_BANK1);
+    
     on_state = POWMAN_POWER_STATE_NONE;
     on_state = powman_power_state_with_domain_on(on_state, POWMAN_POWER_DOMAIN_SWITCHED_CORE);
     on_state = powman_power_state_with_domain_on(on_state, POWMAN_POWER_DOMAIN_XIP_CACHE);

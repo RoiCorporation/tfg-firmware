@@ -22,7 +22,25 @@ display_timer_ctx_t display_timer_ctx;
 volatile int8_t has_associated_central_station;
 uint32_t aes_ctr_counter;
 volatile button_action_t button_action;
+retained_data_t __uninitialized_ram(retained);
 
+static void retained_init_if_needed(void)
+{
+    if (retained.is_first_execution == 0)
+    {
+        printf("FIRST RUN PRINT\n");
+        retained.is_first_execution = 1;
+
+        for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++)
+        {
+            retained.previous_readings[i].temperature = 0;
+            retained.previous_readings[i].humidity = 0;
+            retained.previous_readings[i].light_intensity = 0;
+            retained.previous_readings[i].air_pressure = 0;
+            retained.previous_readings[i].air_quality_index = 0;
+        }
+    }
+}
 
 int main() {
 
@@ -86,6 +104,7 @@ int main() {
     );
     sleep_ms(1500);
     printf("STARTED MAIN\n");
+    retained_init_if_needed();
 
     // Initialize the context structures of both callbacks.
     display_timer_ctx = (display_timer_ctx_t){

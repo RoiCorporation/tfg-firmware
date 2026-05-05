@@ -19,7 +19,6 @@ absolute_time_t time_button_press, time_button_release;
 struct repeating_timer display_turn_change_timer;
 button_ctx_t button_ctx;
 display_timer_ctx_t display_timer_ctx;
-volatile uint8_t button_event_pending;
 volatile int8_t has_associated_central_station;
 uint32_t aes_ctr_counter;
 volatile button_action_t button_action;
@@ -102,74 +101,11 @@ int main() {
 
     while (1) {
 
-        if (button_event_pending == 1) {
-
-            // Whether it was a short or a long press, start the OLED display
-            // sequence by restarting the timer that controls it and resetting
-            // its control variables.
-            cancel_repeating_timer(&display_turn_change_timer);
-
-            display_timer_ctx.display_turn = 1;
-            display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
-            ssd1306_poweron(display_timer_ctx.oled_display);
-            display_turn_timer_callback(&display_turn_change_timer);
-            add_repeating_timer_ms(
-                3000,
-                display_turn_timer_callback,
-                NULL,
-                &display_turn_change_timer
-            );
-
-            if (button_action == START_HANDSHAKE) {
-                printf("HANDSHAKE\n");
-                ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to station");
-                ssd1306_show(&oled_display);
-                
-                // Start the handshake procedure.
-                int8_t handshake_result = handshake(
-                    &nrf24_module,
-                    ecdh_private_key,
-                    ecdh_public_key,
-                    KDF_SALT,
-                    &aes_ctx,
-                    AES_256_IV
-                );
-
-                // If the handshake procedure failed, show an appropriate error
-                // on the display and then restart the display timer.
-                if (handshake_result != 0) {
-                    printf("Error on the handshake when associating a wireless station. Error number %d\n",
-                        HANDSHAKE_ERROR);
-                    cancel_repeating_timer(&display_turn_change_timer);
-
-                    ssd1306_clear(button_ctx.oled_display);
-                    ssd1306_draw_string(button_ctx.oled_display, 0, 16, 1, "An error occurred");
-                    ssd1306_draw_string(button_ctx.oled_display, 0, 32, 1, "trying to connect to");
-                    ssd1306_draw_string(button_ctx.oled_display, 0, 48, 1, "a central station.");
-                    ssd1306_show(button_ctx.oled_display);
-                    sleep_ms(3000);
-
-                    display_timer_ctx.display_turn = 1;
-                    display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
-                    add_repeating_timer_ms(
-                        3000,
-                        display_turn_timer_callback,
-                        NULL,
-                        &display_turn_change_timer
-                    );
-                }
-                else
-                    has_associated_central_station = 0;
-            }
-
-            button_action = NO_ACTION;
-        }
-            
-        station_readings.temperature = 0;
-        station_readings.humidity = 0;
-        station_readings.light_intensity = 0;
-        station_readings.air_pressure = 0;
-        station_readings.air_quality_index = 0;
+        station_readings.temperature = NAN;
+        station_readings.humidity = NAN;
+        station_readings.light_intensity = NAN;
+        station_readings.air_pressure = NAN;
+        station_readings.air_quality_index = NAN;
 
         if (read_bme680_sensor(
             &bme680_sensor,
@@ -208,6 +144,87 @@ int main() {
             activate_hazard_alert(hazard_code);
         }
 
+        // Check if the button has been pressed.
+        if (button_action != NO_ACTION) {
+
+            // If it was a short press, start the OLED display sequence by
+            // restarting the timer that controls it and resetting its control
+            // variables.
+            if (button_action == TURN_ON_DISPLAY) {
+                cancel_repeating_timer(&display_turn_change_timer);
+
+                display_timer_ctx.display_turn = 1;
+                display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
+                ssd1306_poweron(display_timer_ctx.oled_display);
+                display_turn_timer_callback(&display_turn_change_timer);
+                add_repeating_timer_ms(
+                    3000,
+                    display_turn_timer_callback,
+                    NULL,
+                    &display_turn_change_timer);
+            }
+
+            // If it was a long press, invoke the handshake protocol to attempt
+            // to associate this station with a central one.
+            else if (button_action == START_HANDSHAKE) {
+                cancel_repeating_timer(&display_turn_change_timer);
+                ssd1306_poweron(&oled_display);
+                ssd1306_draw_string(&oled_display, 0, 0, 1, "Connecting to station");
+                ssd1306_show(&oled_display);
+                
+                // Start the handshake protocol.
+                int8_t handshake_result = handshake(
+                    &nrf24_module,
+                    ecdh_private_key,
+                    ecdh_public_key,
+                    KDF_SALT,
+                    &aes_ctx,
+                    AES_256_IV
+                );
+
+                ssd1306_clear(&oled_display);
+
+                // If the handshake procedure was successful, show an
+                // informative message on the display. Also update the
+                // variable that stores whether the station is associated
+                // with a central station.
+                if (handshake_result == 0) {
+                    ssd1306_draw_string(&oled_display, 0, 16, 1, "Station associated");
+                    ssd1306_draw_string(&oled_display, 0, 32, 1, "correctly with the");
+                    ssd1306_draw_string(&oled_display, 0, 48, 1, "central station!");
+                    ssd1306_show(&oled_display);
+                    has_associated_central_station = 0;
+                }
+
+                // If the handshake procedure wasn't successful, show an
+                // error message on the display.
+                else {
+                    printf("Error on the handshake when associating a wireless station. Error number %d\n",
+                        HANDSHAKE_ERROR);
+
+                    ssd1306_draw_string(&oled_display, 0, 16, 1, "An error occurred");
+                    ssd1306_draw_string(&oled_display, 0, 32, 1, "trying to connect to");
+                    ssd1306_draw_string(&oled_display, 0, 48, 1, "a central station.");
+                    ssd1306_show(&oled_display);
+                }
+                sleep_ms(3000);
+
+                // Restart the display timer.
+                display_timer_ctx.display_turn = 1;
+                display_timer_ctx.turns_until_display_off = 2 * AMBIENT_INFO_FIELD_COUNT;
+                add_repeating_timer_ms(
+                    3000,
+                    display_turn_timer_callback,
+                    NULL,
+                    &display_turn_change_timer
+                );
+            }
+
+            button_action = NO_ACTION;
+        }
+
+        // If the station is associated with a central one, encrypt and transmit
+        // its sensor readings to it.
         if (has_associated_central_station == 0) {
             encrypt_ambient_info_message(
                 &station_readings,
@@ -228,12 +245,9 @@ int main() {
                 printf("Packet transmitted successfully.\n");
         }
 
-        while (button_event_pending != 0) sleep_ms(500);
-
-        ssd1306_clear(&oled_display);
-        ssd1306_show(&oled_display);
-        ssd1306_poweroff(&oled_display);
-        hibernate();
+        // Wait for any interrupt caused by the touch button.
+        while (button_action == NO_ACTION)
+            __wfi();
     }
 
 }

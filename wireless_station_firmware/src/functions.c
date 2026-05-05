@@ -19,7 +19,6 @@
 #include <stdio.h>
 
 
-extern volatile uint8_t button_event_pending;
 extern uint32_t aes_ctr_counter;
 extern volatile int8_t has_associated_central_station;
 extern volatile button_action_t button_action;
@@ -64,8 +63,7 @@ void initialize_station(
 ) {
 
     // Initialize the global variables.
-    button_action = NO_ACTION;
-    button_event_pending = 1;
+    button_action = TURN_ON_DISPLAY;
     aes_ctr_counter = 0;
     has_associated_central_station = -1;
 

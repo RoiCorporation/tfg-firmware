@@ -4,8 +4,6 @@
 #include "errors.h"
 #include "oled_display.h"
 
-#include <stdio.h>
-
 
 /**
  * @brief Handle the button press and release actions, updating the state
@@ -20,9 +18,7 @@ void button_callback(uint gpio, uint32_t events) {
         time_button_press = get_absolute_time();
     }
     else if (events & GPIO_IRQ_EDGE_FALL) {
-        printf("EVENT\n");
         button_action = TURN_ON_DISPLAY;
-        button_event_pending = 1;
         time_button_release = get_absolute_time();
         uint32_t elapsed_time_ms = (
             to_ms_since_boot(time_button_release) -
@@ -89,8 +85,10 @@ bool display_turn_timer_callback(__unused struct repeating_timer *t) {
     if (display_timer_ctx.turns_until_display_off > 0)
         display_timer_ctx.turns_until_display_off--;
     else {
-        button_event_pending = 0;
         cancel_repeating_timer(&display_turn_change_timer);
+        ssd1306_clear(display_timer_ctx.oled_display);
+        ssd1306_poweroff(display_timer_ctx.oled_display);
+        hibernate();
     }
 
     return true;

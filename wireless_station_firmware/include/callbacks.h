@@ -11,7 +11,6 @@ extern absolute_time_t time_button_press;
 extern absolute_time_t time_button_release;
 extern struct repeating_timer display_turn_change_timer;
 extern display_timer_ctx_t display_timer_ctx;
-extern volatile uint8_t button_event_pending;
 extern volatile button_action_t button_action;
 
 

@@ -99,11 +99,11 @@ typedef struct {
 
 typedef struct {
     uint8_t is_first_execution;
-    uint32_t count;
+    uint8_t has_associated_central_station;
+    uint32_t aes_ctr_counter;
     ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
+    struct AES_ctx *aes_ctx;
 } retained_data_t;
-
-extern retained_data_t retained;
 #endif
 
 

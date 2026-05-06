@@ -19,28 +19,12 @@ absolute_time_t time_button_press, time_button_release;
 struct repeating_timer display_turn_change_timer;
 button_ctx_t button_ctx;
 display_timer_ctx_t display_timer_ctx;
-volatile int8_t has_associated_central_station;
 uint32_t aes_ctr_counter;
 volatile button_action_t button_action;
-retained_data_t __uninitialized_ram(retained);
+retained_data_t data_retained_in_hibernation;
+ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
+retained_data_t __uninitialized_ram(data_retained_in_hibernation);
 
-static void retained_init_if_needed(void)
-{
-    if (retained.is_first_execution == 0)
-    {
-        printf("FIRST RUN PRINT\n");
-        retained.is_first_execution = 1;
-
-        for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++)
-        {
-            retained.previous_readings[i].temperature = 0;
-            retained.previous_readings[i].humidity = 0;
-            retained.previous_readings[i].light_intensity = 0;
-            retained.previous_readings[i].air_pressure = 0;
-            retained.previous_readings[i].air_quality_index = 0;
-        }
-    }
-}
 
 int main() {
 
@@ -71,20 +55,6 @@ int main() {
     // Pointer to a ambient_info_t struct that stores all the data
     // read by the sensors.
     ambient_info_t station_readings;
-    
-    // Array of ambient_info_t elements that holds the n-previous
-    // sensor readings. It's used to check for potential upcoming 
-    // hazards, such as a flood, a sudden fire or a gas leak.
-    ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
-
-    // Initialize the values in the array of previous measurements.
-    for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
-        previous_readings[i].temperature = 0;
-        previous_readings[i].humidity = 0;
-        previous_readings[i].light_intensity = 0;
-        previous_readings[i].air_pressure = 0;
-        previous_readings[i].air_quality_index = 0;
-    }
 
     // Configure all the protocols, devices and pins in the station.
     initialize_station(
@@ -103,8 +73,25 @@ int main() {
         SPI_BAUDRATE
     );
     sleep_ms(1500);
-    printf("STARTED MAIN\n");
-    retained_init_if_needed();
+
+    if (data_retained_in_hibernation.is_first_execution == 0) {
+        data_retained_in_hibernation.is_first_execution = -1;
+        data_retained_in_hibernation.has_associated_central_station = -1;
+        data_retained_in_hibernation.aes_ctr_counter = 0;
+        data_retained_in_hibernation.aes_ctx = &aes_ctx;
+
+        // Initialize the values in the array of previous measurements. This is only
+        // done in the first execution.
+        for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
+            previous_readings[i].temperature = 0;
+            previous_readings[i].humidity = 0;
+            previous_readings[i].light_intensity = 0;
+            previous_readings[i].air_pressure = 0;
+            previous_readings[i].air_quality_index = 0;
+        }
+    }
+
+    aes_ctx = *data_retained_in_hibernation.aes_ctx;
 
     // Initialize the context structures of both callbacks.
     display_timer_ctx = (display_timer_ctx_t){
@@ -212,7 +199,7 @@ int main() {
                     ssd1306_draw_string(&oled_display, 0, 32, 1, "correctly with the");
                     ssd1306_draw_string(&oled_display, 0, 48, 1, "central station!");
                     ssd1306_show(&oled_display);
-                    has_associated_central_station = 0;
+                    data_retained_in_hibernation.has_associated_central_station = 0;
                 }
 
                 // If the handshake procedure wasn't successful, show an
@@ -244,7 +231,7 @@ int main() {
 
         // If the station is associated with a central one, encrypt and transmit
         // its sensor readings to it.
-        if (has_associated_central_station == 0) {
+        if (data_retained_in_hibernation.has_associated_central_station == 0) {
             encrypt_ambient_info_message(
                 &station_readings,
                 &aes_ctx,

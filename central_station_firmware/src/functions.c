@@ -268,6 +268,7 @@ int8_t handshake(
     uint8_t shared_secret[ECC_PUB_KEY_SIZE] = {0x00};
     uint8_t aes_key[AES_KEY_SIZE] = {0x00};
     uint8_t wireless_station_id_bytes[STATION_ID_BYTES_LENGTH] = {0x00};
+    uint8_t wireless_station_id_packet[STATION_ID_BYTES_LENGTH + AES_IV_COUNTER_SIZE] = {0x00};
     uint8_t nrf24_address_available[NRF24_ADDRESS_SIZE] = {0x00};
     uint8_t nrf24_address_packet[NRF24_ADDRESS_SIZE + AES_IV_COUNTER_SIZE] = {0x00};
     uint8_t check_nrf24_address[NRF24_ADDRESS_SIZE] = {0x00};
@@ -481,14 +482,18 @@ int8_t handshake(
             // so that it only receives packets in that specific address.
             else {
                 if (nrf24_module->read_packet(
-                    wireless_station_id_bytes, sizeof(wireless_station_id_bytes)) != ERROR) 
-                {
-            
-                    AES_CTR_xcrypt_buffer(
-                        &associated_wireless_stations_info_map[data_pipe_read].aes_ctx,
+                    wireless_station_id_packet, sizeof(wireless_station_id_packet)) != ERROR) {
+
+                    // Decrypt the message containing the wireless station ID
+                    // using the AES encryption module set up above.
+                    decrypt_nrf24_payload(
                         wireless_station_id_bytes,
-                        sizeof(wireless_station_id_bytes)
+                        wireless_station_id_packet,
+                        sizeof(wireless_station_id_packet),
+                        &associated_wireless_stations_info_map[data_pipe_read].aes_ctx,
+                        aes_iv
                     );
+
                     mappings_buffer_modified = 0;
                     if (first_available_data_pipe < DATA_PIPE_2) {
                         nrf24_module->rx_destination(

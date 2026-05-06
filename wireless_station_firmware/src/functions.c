@@ -18,9 +18,7 @@
 
 #include <stdio.h>
 
-
-extern uint32_t aes_ctr_counter;
-extern volatile int8_t has_associated_central_station;
+extern retained_data_t data_retained_in_hibernation;
 extern volatile button_action_t button_action;
 
 
@@ -64,8 +62,6 @@ void initialize_station(
 
     // Initialize the global variables.
     button_action = TURN_ON_DISPLAY;
-    aes_ctr_counter = 0;
-    has_associated_central_station = -1;
 
     // Configure every component, protocol, GPIO,...
     stdio_init_all();
@@ -252,6 +248,7 @@ int8_t handshake(
     uint8_t shared_secret[ECC_PUB_KEY_SIZE] = {0x00};
     uint8_t aes_key[AES_KEY_SIZE] = {0x00};
     uint8_t station_id_in_bytes[STATION_ID_BYTES_LENGTH] = {0x00};
+    uint8_t station_id_packet[STATION_ID_BYTES_LENGTH + AES_IV_COUNTER_SIZE] = {0x00};
     uint8_t nrf24_address_packet[NRF24_ADDRESS_SIZE + AES_IV_COUNTER_SIZE] = {0x00};
     uint8_t final_nrf24_address[NRF24_ADDRESS_SIZE] = {0x00};
     uint8_t aux_flush_rx_fifo_buffer[NRF24_MAX_PACKET_SIZE] = {0x00};
@@ -407,11 +404,18 @@ int8_t handshake(
         return (int8_t)-1;
 
     // Encrypt the message using the AES encryption module set up above.
-    AES_CTR_xcrypt_buffer(aes_ctx, station_id_in_bytes, sizeof(station_id_in_bytes));
+    encrypt_nrf24_payload(
+        station_id_in_bytes,
+        sizeof(station_id_in_bytes),
+        station_id_packet,
+        aes_ctx,
+        aes_iv,
+        &data_retained_in_hibernation.aes_ctr_counter
+    );
 
     // Transmit this station's ID as an array of bytes.
     for (int i = 0; i < HANDSHAKE_RETRANSMISSIONS; i++) {
-        nrf24_module->send_packet(station_id_in_bytes, sizeof(station_id_in_bytes));
+        nrf24_module->send_packet(station_id_packet, sizeof(station_id_packet));
         sleep_ms(15);
     }
 
@@ -477,7 +481,7 @@ int8_t handshake(
         nrf24_address_packet,
         aes_ctx,
         aes_iv,
-        &aes_ctr_counter
+        &data_retained_in_hibernation.aes_ctr_counter
     );
 
     // Transmit the NRF24 address to check that it was received correctly.
@@ -551,8 +555,8 @@ int8_t handshake(
 void exit_handshake(nrf_client_t *nrf24_module) {
 
     // Reset the AES CTR counter.
-    aes_ctr_counter = 0;
-    
+    data_retained_in_hibernation.aes_ctr_counter = 0;
+
     // Set the TX address to be the default handshake address that all
     // central stations listen to.
     nrf24_module->tx_destination((uint8_t[]){0x00, 0x00, 0x00, 0x00, 0x00});
@@ -818,6 +822,6 @@ void encrypt_ambient_info_message(
         message,
         aes_ctx,
         aes_iv,
-        &aes_ctr_counter
+        &data_retained_in_hibernation.aes_ctr_counter
     );
 }

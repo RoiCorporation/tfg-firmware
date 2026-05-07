@@ -146,9 +146,10 @@ int8_t handshake(
     uint8_t ecdh_public_key[],
     uint8_t kdf_salt[],
     struct AES_ctx *aes_ctx,
-    uint8_t aes_iv[]
+    uint8_t aes_iv[],
+    uint32_t *aes_ctr_counter
 );
-void exit_handshake(nrf_client_t *nrf24_module);
+void exit_handshake(nrf_client_t *nrf24_module, uint32_t *aes_ctr_counter);
 void hibernate();
 
 // Functions related to sensor readings.
@@ -186,7 +187,8 @@ void encrypt_ambient_info_message(
     ambient_info_t *reading,
     struct AES_ctx *aes_ctx,
     uint8_t aes_iv[],
-    uint8_t message[]
+    uint8_t message[],
+    uint32_t *aes_ctr_counter
 );
 #endif
 

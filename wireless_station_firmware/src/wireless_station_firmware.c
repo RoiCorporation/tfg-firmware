@@ -21,9 +21,8 @@ button_ctx_t button_ctx;
 display_timer_ctx_t display_timer_ctx;
 uint32_t aes_ctr_counter;
 volatile button_action_t button_action;
-retained_data_t data_retained_in_hibernation;
 ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
-retained_data_t __uninitialized_ram(data_retained_in_hibernation);
+static retained_data_t data_retained_in_hibernation;
 
 
 int main() {
@@ -74,7 +73,12 @@ int main() {
     );
     sleep_ms(1500);
 
+    
     if (data_retained_in_hibernation.is_first_execution == 0) {
+        ssd1306_poweron(&oled_display);
+        ssd1306_draw_string(&oled_display, 0, 0, 1, "BLABLA");
+        ssd1306_show(&oled_display);
+        sleep_ms(3000);
         data_retained_in_hibernation.is_first_execution = -1;
         data_retained_in_hibernation.has_associated_central_station = -1;
         data_retained_in_hibernation.aes_ctr_counter = 0;
@@ -89,6 +93,13 @@ int main() {
             previous_readings[i].air_pressure = 0;
             previous_readings[i].air_quality_index = 0;
         }
+    }
+
+    else {
+        ssd1306_poweron(&oled_display);
+        ssd1306_draw_string(&oled_display, 0, 0, 1, "NOT THE FIRST");
+        ssd1306_show(&oled_display);
+        sleep_ms(3000);
     }
 
     aes_ctx = *data_retained_in_hibernation.aes_ctx;
@@ -185,7 +196,8 @@ int main() {
                     ecdh_public_key,
                     KDF_SALT,
                     &aes_ctx,
-                    AES_256_IV
+                    AES_256_IV,
+                    &data_retained_in_hibernation.aes_ctr_counter
                 );
 
                 ssd1306_clear(&oled_display);
@@ -236,7 +248,8 @@ int main() {
                 &station_readings,
                 &aes_ctx,
                 AES_256_IV,
-                radio_message
+                radio_message,
+                &data_retained_in_hibernation.aes_ctr_counter
             );
 
             if (transmit_station_readings(

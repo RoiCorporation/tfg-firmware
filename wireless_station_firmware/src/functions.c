@@ -13,7 +13,6 @@
 #include "bme680_port.h"
 #include "utils.h"
 #include "ecdh.h"
-#include "low_power.h"
 
 
 #include <stdio.h>
@@ -227,6 +226,7 @@ void initialize_nrf24_module(
  * invoking the KDF.
  * @param aes_iv uint8_t array containing the initialization vector with which
  * to set up the AES encryption module.
+ * @param aes_ctr_counter pointer to the AES CTR counter used to encrypt packets.
  * @return int8_t 0 if the handshake was completed successfully, -1 otherwise.
  */
 int8_t handshake(
@@ -235,7 +235,8 @@ int8_t handshake(
     uint8_t ecdh_public_key[],
     uint8_t kdf_salt[],
     struct AES_ctx *aes_ctx,
-    uint8_t aes_iv[]
+    uint8_t aes_iv[],
+    uint32_t *aes_ctr_counter
 ) {
 
     printf("ENTERED HANDSHAKE\n");
@@ -304,7 +305,7 @@ int8_t handshake(
         read_loop_iterations++;
         if (read_loop_iterations >= HANDSHAKE_MAX_READ_LOOP_ITERATIONS) {
             printf("FAIL 2\n");
-            exit_handshake(nrf24_module);
+            exit_handshake(nrf24_module, aes_ctr_counter);
             return (int8_t)-1;
         }
 
@@ -349,7 +350,7 @@ int8_t handshake(
         }
         read_loop_iterations++;
         if (read_loop_iterations >= HANDSHAKE_MAX_READ_LOOP_ITERATIONS) {
-            exit_handshake(nrf24_module);
+            exit_handshake(nrf24_module, aes_ctr_counter);
             printf("FAIL 4\n");
             return (int8_t)-1;
         }
@@ -410,7 +411,7 @@ int8_t handshake(
         station_id_packet,
         aes_ctx,
         aes_iv,
-        &data_retained_in_hibernation.aes_ctr_counter
+        aes_ctr_counter
     );
 
     // Transmit this station's ID as an array of bytes.
@@ -445,7 +446,7 @@ int8_t handshake(
         }
         read_loop_iterations++;
         if (read_loop_iterations >= HANDSHAKE_MAX_READ_LOOP_ITERATIONS) {
-            exit_handshake(nrf24_module);
+            exit_handshake(nrf24_module, aes_ctr_counter);
             return (int8_t)-1;
         }
 
@@ -481,7 +482,7 @@ int8_t handshake(
         nrf24_address_packet,
         aes_ctx,
         aes_iv,
-        &data_retained_in_hibernation.aes_ctr_counter
+        aes_ctr_counter
     );
 
     // Transmit the NRF24 address to check that it was received correctly.
@@ -512,7 +513,7 @@ int8_t handshake(
         }
         read_loop_iterations++;
         if (read_loop_iterations >= HANDSHAKE_MAX_READ_LOOP_ITERATIONS) {
-            exit_handshake(nrf24_module);
+            exit_handshake(nrf24_module, aes_ctr_counter);
             return (int8_t)-1;
         }
 
@@ -551,11 +552,12 @@ int8_t handshake(
  * configuration of the NRF24L01 module to its original setup.
  * 
  * @param nrf24_module pointer to the NRF24L01 module driver.
+ * @param aes_ctr_counter pointer to the AES CTR counter used during the handshake.
  */
-void exit_handshake(nrf_client_t *nrf24_module) {
+void exit_handshake(nrf_client_t *nrf24_module, uint32_t *aes_ctr_counter) {
 
     // Reset the AES CTR counter.
-    data_retained_in_hibernation.aes_ctr_counter = 0;
+    *aes_ctr_counter = 0;
 
     // Set the TX address to be the default handshake address that all
     // central stations listen to.
@@ -564,12 +566,6 @@ void exit_handshake(nrf_client_t *nrf24_module) {
     // Set to standby-I mode.
     nrf24_module->standby_mode();
     sleep_ms(300);
-}
-
-
-void hibernate() {
-    printf("GOING INTO LOW POWER\n");
-    turn_low_power_on();
 }
 
 
@@ -783,12 +779,14 @@ void decrypt_nrf24_payload(
  * @param aes_iv uint8_t array containing the initialization vector for the AES
  * CTR encryption/decryption scheme.
  * @param message uint8_t array where the encrypted message will be stored.
+ * @param aes_ctr_counter pointer to the AES CTR counter used to encrypt packets.
  */
 void encrypt_ambient_info_message(
     ambient_info_t *reading,
     struct AES_ctx *aes_ctx,
     uint8_t aes_iv[],
-    uint8_t message[]
+    uint8_t message[],
+    uint32_t *aes_ctr_counter
 ) {
 
     float ambient_values_array[sizeof(ambient_info_t) / sizeof(float)] = {
@@ -822,6 +820,6 @@ void encrypt_ambient_info_message(
         message,
         aes_ctx,
         aes_iv,
-        &data_retained_in_hibernation.aes_ctr_counter
+        aes_ctr_counter
     );
 }

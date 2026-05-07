@@ -9,6 +9,12 @@ powman_power_state off_state;
 powman_power_state on_state;
 
 
+/**
+ * Initialize POWMAN timer and sleep/wake power states.
+ *
+ * Keep SRAM banks 0 and 1 powered in sleep so retained data survives,
+ * and restore core, XIP cache, and SRAM on wake.
+ */
 void init_powman_states(void) {
     powman_timer_start();
     powman_timer_set_1khz_tick_source_lposc();
@@ -25,7 +31,12 @@ void init_powman_states(void) {
 }
 
 
-int8_t turn_low_power_on(void) {
+/**
+ * @brief Use the Pico 2 W power manager to power off most of the board
+ * ("hibernate") and configure the wake up timer and the touch button as
+ * the only interruptions.
+ */
+void hibernate(void) {
 
     init_powman_states();
     multicore_reset_core1();
@@ -44,7 +55,7 @@ int8_t turn_low_power_on(void) {
     gpio_pull_down(TOUCH_BUTTON_PIN);
     gpio_set_input_enabled(TOUCH_BUTTON_PIN, true);
 
-    // Turn off Pico 2 W wireless power signal
+    // Turn off Pico 2 W wireless power signal.
     gpio_init(23);
     gpio_set_dir(23, GPIO_OUT);
     gpio_put(23, 0);
@@ -53,7 +64,6 @@ int8_t turn_low_power_on(void) {
 
     gpio_disable_pulls(TOUCH_BUTTON_PIN);
     powman_enable_gpio_wakeup(0, TOUCH_BUTTON_PIN, false, true);
-
     powman_enable_alarm_wakeup_at_ms(powman_timer_get_ms() + 15000);
 
     if (!powman_configure_wakeup_state(off_state, on_state)) {

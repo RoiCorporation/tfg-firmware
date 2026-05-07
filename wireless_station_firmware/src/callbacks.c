@@ -3,6 +3,7 @@
 #include "callbacks.h"
 #include "errors.h"
 #include "oled_display.h"
+#include "low_power.h"
 
 
 /**

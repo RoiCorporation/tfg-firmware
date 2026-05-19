@@ -6,6 +6,7 @@
 #include "hardware/sync.h"
 #include "hardware/gpio.h"
 #include "hardware/powman.h"
+#include "hardware/flash.h"
 #include "ssd1306.h"
 #include "oled_display.h"
 #include "wireless_station_firmware.h"
@@ -22,7 +23,12 @@ display_timer_ctx_t display_timer_ctx;
 uint32_t aes_ctr_counter;
 volatile button_action_t button_action;
 ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
-static retained_data_t data_retained_in_hibernation;
+retained_data_t data_retained_storage = {
+    .is_first_execution = FLASH_MAGIC_NUMBER,
+    .has_associated_central_station = FLASH_MAGIC_NUMBER
+};
+uint8_t should_hibernate = 1;
+retained_data_t *data_retained_in_hibernation = &data_retained_storage;
 
 
 int main() {
@@ -55,6 +61,12 @@ int main() {
     // read by the sensors.
     ambient_info_t station_readings;
 
+    memcpy(
+        data_retained_in_hibernation,
+        (const void *)FLASH_READ_START,
+        sizeof(retained_data_t)
+    );
+
     // Configure all the protocols, devices and pins in the station.
     initialize_station(
         &bme680_sensor,
@@ -73,16 +85,10 @@ int main() {
     );
     sleep_ms(1500);
 
-    
-    if (data_retained_in_hibernation.is_first_execution == 0) {
-        ssd1306_poweron(&oled_display);
-        ssd1306_draw_string(&oled_display, 0, 0, 1, "BLABLA");
-        ssd1306_show(&oled_display);
-        sleep_ms(3000);
-        data_retained_in_hibernation.is_first_execution = -1;
-        data_retained_in_hibernation.has_associated_central_station = -1;
-        data_retained_in_hibernation.aes_ctr_counter = 0;
-        data_retained_in_hibernation.aes_ctx = &aes_ctx;
+    if (data_retained_in_hibernation->is_first_execution != 1) {
+        data_retained_in_hibernation->is_first_execution = 1;
+        data_retained_in_hibernation->has_associated_central_station = 1;
+        data_retained_in_hibernation->aes_ctr_counter = 0;
 
         // Initialize the values in the array of previous measurements. This is only
         // done in the first execution.
@@ -96,13 +102,25 @@ int main() {
     }
 
     else {
-        ssd1306_poweron(&oled_display);
-        ssd1306_draw_string(&oled_display, 0, 0, 1, "NOT THE FIRST");
-        ssd1306_show(&oled_display);
-        sleep_ms(3000);
+
+        should_hibernate = 1;
+
+        // Load the values of the previous readings.
+        for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY; i++) {
+            previous_readings[i].temperature =
+                data_retained_in_hibernation->previous_readings[i].temperature;
+            previous_readings[i].humidity =
+                data_retained_in_hibernation->previous_readings[i].humidity;
+            previous_readings[i].light_intensity =
+                data_retained_in_hibernation->previous_readings[i].light_intensity;
+            previous_readings[i].air_pressure =
+                data_retained_in_hibernation->previous_readings[i].air_pressure;
+            previous_readings[i].air_quality_index =
+                data_retained_in_hibernation->previous_readings[i].air_quality_index;
+        }
     }
 
-    aes_ctx = *data_retained_in_hibernation.aes_ctx;
+    aes_ctx = data_retained_in_hibernation->aes_ctx;
 
     // Initialize the context structures of both callbacks.
     display_timer_ctx = (display_timer_ctx_t){
@@ -164,6 +182,8 @@ int main() {
         // Check if the button has been pressed.
         if (button_action != NO_ACTION) {
 
+            should_hibernate = 0;
+
             // If it was a short press, start the OLED display sequence by
             // restarting the timer that controls it and resetting its control
             // variables.
@@ -197,7 +217,7 @@ int main() {
                     KDF_SALT,
                     &aes_ctx,
                     AES_256_IV,
-                    &data_retained_in_hibernation.aes_ctr_counter
+                    &(data_retained_in_hibernation->aes_ctr_counter)
                 );
 
                 ssd1306_clear(&oled_display);
@@ -211,7 +231,12 @@ int main() {
                     ssd1306_draw_string(&oled_display, 0, 32, 1, "correctly with the");
                     ssd1306_draw_string(&oled_display, 0, 48, 1, "central station!");
                     ssd1306_show(&oled_display);
-                    data_retained_in_hibernation.has_associated_central_station = 0;
+                    data_retained_in_hibernation->has_associated_central_station = 0;
+                    memcpy(
+                        &(data_retained_in_hibernation->aes_ctx),
+                        &aes_ctx,
+                        sizeof(aes_ctx)
+                    );
                 }
 
                 // If the handshake procedure wasn't successful, show an
@@ -243,13 +268,13 @@ int main() {
 
         // If the station is associated with a central one, encrypt and transmit
         // its sensor readings to it.
-        if (data_retained_in_hibernation.has_associated_central_station == 0) {
+        if (data_retained_in_hibernation->has_associated_central_station != 1) {
             encrypt_ambient_info_message(
                 &station_readings,
                 &aes_ctx,
                 AES_256_IV,
                 radio_message,
-                &data_retained_in_hibernation.aes_ctr_counter
+                &(data_retained_in_hibernation->aes_ctr_counter)
             );
 
             if (transmit_station_readings(
@@ -263,6 +288,9 @@ int main() {
             else
                 printf("Packet transmitted successfully.\n");
         }
+
+        if (should_hibernate == 1)
+            hibernate();
 
         // Wait for any interrupt caused by the touch button.
         while (button_action == NO_ACTION)

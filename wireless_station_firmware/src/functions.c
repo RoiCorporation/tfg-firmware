@@ -60,7 +60,7 @@ void initialize_station(
 ) {
 
     // Initialize the global variables.
-    button_action = TURN_ON_DISPLAY;
+    button_action = NO_ACTION;
 
     // Configure every component, protocol, GPIO,...
     stdio_init_all();
@@ -73,6 +73,7 @@ void initialize_station(
     ssd1306_init(oled_display, 128, 64, OLED_DISPLAY_I2C_ADDRESS, i2c0);
     sleep_ms(200);
     ssd1306_clear(oled_display);
+    ssd1306_show(oled_display);
     initialize_nrf24_module(
         nrf24_module, copi_pin, cipo_pin, sck_pin, cs_pin, ce_pin, spi_baudrate
     );

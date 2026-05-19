@@ -1,5 +1,7 @@
 #include "low_power.h"
+#include <string.h>
 #include "hardware/powman.h"
+#include "hardware/flash.h"
 #include "pico/multicore.h"
 #include "hardware/clocks.h"
 #include "pico/time.h"
@@ -37,6 +39,8 @@ void init_powman_states(void) {
  * the only interruptions.
  */
 void hibernate(void) {
+
+    save_retained_data_to_flash();
 
     init_powman_states();
     multicore_reset_core1();
@@ -77,4 +81,31 @@ void hibernate(void) {
     powman_hw->boot[3] = 0;
 
     powman_set_power_state(off_state);
+}
+
+
+/**
+ * @brief Save retained data to flash.
+ *
+ * Update the reserved flash sector with the current retained data, disabling
+ * interrupts during erase/program operations.
+ */
+void save_retained_data_to_flash() {
+    uint8_t sector_buffer[FLASH_SECTOR_SIZE];
+
+    memcpy(sector_buffer, (const void *)FLASH_READ_ADDR, FLASH_SECTOR_SIZE);
+
+    memcpy(
+        sector_buffer,
+        data_retained_in_hibernation,
+        sizeof(retained_data_t)
+    );
+
+    // Start critical section.
+    uint32_t ints = save_and_disable_interrupts();
+    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
+    flash_range_program(FLASH_TARGET_OFFSET, sector_buffer, FLASH_SECTOR_SIZE);
+
+    // End critical section.
+    restore_interrupts(ints);
 }

@@ -66,6 +66,7 @@ target_link_libraries(${PROJECT_NAME}
     hardware_pio
     hardware_pwm
     hardware_powman
+    hardware_flash
     hardware_clocks
     pico_multicore
     BME68x_SensorAPI

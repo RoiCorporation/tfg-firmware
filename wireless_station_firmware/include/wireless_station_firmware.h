@@ -37,6 +37,15 @@
 #define AIR_QUALITY_HAZARD_THRESHOLD 150.0
 #define EPSILON 1e-5
 
+/* FLASH MEMORY */
+#define FLASH_MAGIC_NUMBER 0x3B
+#define PAGE_SIZE 256
+#define NVS_SIZE 4096
+#define FLASH_TARGET_OFFSET (PICO_FLASH_SIZE_BYTES - 4096)
+#define FLASH_READ_ADDR (XIP_BASE + FLASH_TARGET_OFFSET)
+#define FLASH_WRITE_START (PICO_FLASH_SIZE_BYTES - NVS_SIZE)
+#define FLASH_READ_START  (FLASH_WRITE_START + XIP_BASE)
+
 /* I2C */
 #define SDA_PIN 4
 #define SCL_PIN 5
@@ -102,7 +111,7 @@ typedef struct {
     uint8_t has_associated_central_station;
     uint32_t aes_ctr_counter;
     ambient_info_t previous_readings[LENGTH_PREVIOUS_READINGS_ARRAY];
-    struct AES_ctx *aes_ctx;
+    struct AES_ctx aes_ctx;
 } retained_data_t;
 #endif
 

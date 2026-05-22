@@ -174,7 +174,7 @@ int main() {
 
         // Take the readings of this station once every minute. To calculate
         // that period, use the poll counter and the delay between polls.
-        if (polls_until_publishing_readings == (3000 / MAIN_LOOP_POLLING_PERIOD_MS)) {
+        if (polls_until_publishing_readings == (MINUTE_IN_MILLISECONDS / MAIN_LOOP_POLLING_PERIOD_MS)) {
             
             // Reset the values inside the station readings struct.
             memcpy(station_readings.station_id, STATION_ID, STATION_ID_CHAR_LENGTH);
@@ -336,7 +336,7 @@ int main() {
         }
 
         polls_until_publishing_readings++;
-        sleep_ms(250);
+        sleep_ms(MAIN_LOOP_POLLING_PERIOD_MS);
         printf("\n");
         if (mongoose_polling_enabled == 0)
             mg_mgr_poll(&connection_manager, 10);

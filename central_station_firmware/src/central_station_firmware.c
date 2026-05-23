@@ -200,9 +200,12 @@ int main() {
                     BME680_READ_ERROR);
             }
             else {
-                printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, Gas resistance (ohm) %d\n", station_readings.temperature,
-                    station_readings.humidity, station_readings.air_pressure,
-                    station_readings.air_quality_index);
+                printf("Temperature %.2f, Humidity %.2f, Air pressure %.2f, IAQ %f\n",
+                    station_readings.temperature,
+                    station_readings.humidity,
+                    station_readings.air_pressure,
+                    station_readings.air_quality_index
+                );
             }
 
             if (read_light_intensity(&station_readings) == -1) {
@@ -214,17 +217,11 @@ int main() {
             }
 
             // TODO: change this when we find a way to actually calculate the correct AQI + gas concentrations.
-            station_readings.air_quality_index = 0;
             station_readings.carbon_monoxide_concentration = 0;
             station_readings.methane_concentration = 0;
             station_readings.propane_concentration = 0;
             station_readings.alcohol_concentration = 0;
             station_readings.hydrogen_gas_concentration = 0;
-
-            printf("Temperature: %f; Humidity: %f; ID: %s\n",
-                station_readings.temperature,
-                station_readings.humidity,
-                station_readings.station_id);
 
             // Update the array of previous readings.
             for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {

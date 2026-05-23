@@ -47,6 +47,7 @@ add_executable(${PROJECT_NAME}
     src/oled_display.c
     lib/pico-ssd1306/ssd1306.c
     src/monocypher.c
+    src/iaq.c
 )
 
 pico_set_program_name(${PROJECT_NAME} "${PROJECT_NAME}")

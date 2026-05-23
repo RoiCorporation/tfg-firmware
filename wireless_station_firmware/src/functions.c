@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 #include <stdint.h>
@@ -13,9 +14,9 @@
 #include "bme680_port.h"
 #include "utils.h"
 #include "ecdh.h"
+#include "iaq.h"
 
 
-#include <stdio.h>
 
 extern retained_data_t data_retained_in_hibernation;
 extern volatile button_action_t button_action;
@@ -607,7 +608,7 @@ int8_t read_bme680_sensor(
         reading->temperature = sensor_data_read.temperature;
         reading->humidity = sensor_data_read.humidity;
         reading->air_pressure = sensor_data_read.pressure;
-        reading->air_quality_index = sensor_data_read.gas_resistance;
+        calculate_iaq(sensor_data_read.humidity, sensor_data_read.gas_resistance, &(reading->air_quality_index));
         return (int8_t)0;
     }
     return (int8_t)-1;

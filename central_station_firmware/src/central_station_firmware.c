@@ -13,6 +13,7 @@
 #include "hazards.h"
 #include "alerts.h"
 #include "errors.h"
+#include "mq_sensors.h"
 
 
 volatile button_action_t button_action = NO_ACTION;
@@ -174,7 +175,7 @@ int main() {
 
         // Take the readings of this station once every minute. To calculate
         // that period, use the poll counter and the delay between polls.
-        if (polls_until_publishing_readings == (MINUTE_IN_MILLISECONDS / MAIN_LOOP_POLLING_PERIOD_MS)) {
+        if (polls_until_publishing_readings == (3000 / MAIN_LOOP_POLLING_PERIOD_MS)) {
             
             // Reset the values inside the station readings struct.
             memcpy(station_readings.station_id, STATION_ID, STATION_ID_CHAR_LENGTH);
@@ -216,12 +217,13 @@ int main() {
                 printf("Light intensity: %.2f\n", station_readings.light_intensity);
             }
 
-            // TODO: change this when we find a way to actually calculate the correct AQI + gas concentrations.
-            station_readings.carbon_monoxide_concentration = 0;
-            station_readings.methane_concentration = 0;
-            station_readings.propane_concentration = 0;
-            station_readings.alcohol_concentration = 0;
-            station_readings.hydrogen_gas_concentration = 0;
+            station_readings.carbon_monoxide_concentration = read_mq_7_co_ppm();
+            station_readings.methane_concentration = read_mq_4_ch4_ppm();
+            station_readings.propane_concentration = read_mq_6_c3h8_ppm();
+            if (gpio_get(MQ_8_PIN))
+                station_readings.hydrogen_gas_concentration = 1000;
+            else
+                station_readings.hydrogen_gas_concentration = 0;
 
             // Update the array of previous readings.
             for (int i = 0; i < LENGTH_PREVIOUS_READINGS_ARRAY - 1; i++) {

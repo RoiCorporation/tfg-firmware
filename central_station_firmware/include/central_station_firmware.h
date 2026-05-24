@@ -51,6 +51,12 @@
 #define HYDROGEN_GAS_HAZARD_THRESHOLD 4000.0
 #define EPSILON 1e-5
 
+/* MQ sensors */
+#define MQ_7_PIN 26
+#define MQ_4_PIN 27
+#define MQ_6_PIN 28
+#define MQ_8_PIN 22
+
 /* I2C */
 #define SDA_PIN 4
 #define SCL_PIN 5

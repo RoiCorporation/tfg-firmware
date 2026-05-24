@@ -4,6 +4,7 @@
 #include "pico/rand.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
+#include "hardware/adc.h"
 #include "central_station_firmware.h"
 #include "bme680_port.h"
 #include "utils.h"
@@ -103,6 +104,14 @@ void initialize_station(
         true,
         &button_callback
     );
+
+    adc_init();
+    adc_gpio_init(MQ_7_PIN);
+    adc_gpio_init(MQ_4_PIN);
+    adc_gpio_init(MQ_6_PIN);
+    gpio_init(MQ_8_PIN);
+    gpio_set_dir(MQ_8_PIN, GPIO_IN);
+    gpio_pull_up(MQ_8_PIN);
 }
 
 

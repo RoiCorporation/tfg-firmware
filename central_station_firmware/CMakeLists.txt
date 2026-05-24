@@ -48,6 +48,7 @@ add_executable(${PROJECT_NAME}
     lib/pico-ssd1306/ssd1306.c
     src/monocypher.c
     src/iaq.c
+    src/mq_sensors.c
 )
 
 pico_set_program_name(${PROJECT_NAME} "${PROJECT_NAME}")
@@ -68,6 +69,7 @@ target_link_libraries(${PROJECT_NAME}
     pico_bootrom
     pico_mbedtls
     hardware_flash
+    hardware_adc
     BME68x_SensorAPI
     nrf24_driver
     tiny-ECDH-c

@@ -48,12 +48,6 @@ void test_analyze_hazards_continuously_incrementing_parameters(void) {
     TEST_ASSERT_EQUAL_INT(PROPANE_WORSENING_HAZARD, analyze_hazards(previous_readings));
 
     // Test with a list of previous readings that poses a hazard due to the
-    // alcohol concentration worsening continuously beyond the established
-    // safeguard.
-    create_worsening_alcohol_hazard(previous_readings);
-    TEST_ASSERT_EQUAL_INT(ALCOHOL_WORSENING_HAZARD, analyze_hazards(previous_readings));
-
-    // Test with a list of previous readings that poses a hazard due to the
     // hydrogen gas concentration worsening continuously beyond the established
     // safeguard.
     create_worsening_hydrogen_gas_hazard(previous_readings);
@@ -134,15 +128,6 @@ void test_analyze_hazards_breaking_incrementing_parameter_series(void) {
                 break;
 
             case 8:
-                create_worsening_alcohol_hazard(previous_readings);
-                for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
-                    previous_readings[j].alcohol_concentration += 0.1;
-                    TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
-                    previous_readings[j].alcohol_concentration -= 0.1;
-                }
-                break;
-
-            case 9:
                 create_worsening_hydrogen_gas_hazard(previous_readings);
                 for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
                     previous_readings[j].hydrogen_gas_concentration += 0.1;
@@ -260,23 +245,6 @@ void test_analyze_hazards_over_threshold_parameters(void) {
             break;
 
         case 8:
-            for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
-                float alcohol_concentration_before =
-                    previous_readings[j].alcohol_concentration;
-                previous_readings[j].alcohol_concentration =
-                    ALCOHOL_HAZARD_THRESHOLD + 0.1;
-                TEST_ASSERT_EQUAL_INT(
-                    ALCOHOL_WORSENING_HAZARD,
-                    analyze_hazards(previous_readings));
-                previous_readings[j].alcohol_concentration =
-                    ALCOHOL_HAZARD_THRESHOLD;
-                TEST_ASSERT_EQUAL_INT(0, analyze_hazards(previous_readings));
-                previous_readings[j].alcohol_concentration =
-                    alcohol_concentration_before;
-            }
-            break;
-
-        case 9:
             for (int j = 0; j < LENGTH_PREVIOUS_READINGS_ARRAY - 1; j++) {
                 float hydrogen_gas_concentration_before =
                     previous_readings[j].hydrogen_gas_concentration;

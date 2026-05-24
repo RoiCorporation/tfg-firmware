@@ -290,36 +290,6 @@ void display_propane_concentration(
 
 
 /**
- * @brief Displays the given alcohol concentration in a 128x64 OLED display.
- * 
- * @param oled_display pointer to the OLED display driver.
- * @param alcohol_concentration value of the alcohol concentration to display.
- */
-void display_alcohol_concentration(
-    ssd1306_t *oled_display,
-    float alcohol_concentration
-) {
-    uint32_t value_x_offset = 44;
-    char alcohol_string[MAX_DISPLAY_DIGITS_BUFFER_SIZE];
-    snprintf(alcohol_string, sizeof(alcohol_string), "%.2f",
-        alcohol_concentration);
-    
-    // Update the value offset according to the magnitude of the alcohol
-    // concentration.
-    if (alcohol_concentration >= 10)
-        value_x_offset = 39;
-
-    // Print the title and alcohol concentration in the display with their
-    // respective offsets.
-    ssd1306_clear(oled_display);
-    ssd1306_draw_string(oled_display, 48, 18, 1, "Alcohol");
-    ssd1306_draw_string(oled_display, value_x_offset, 30, 2, alcohol_string);
-    ssd1306_draw_string(oled_display, 80, 48, 2, "mg/L");
-    ssd1306_show(oled_display);
-}
-
-
-/**
  * @brief Displays the given hydrogen gas (H2) concentration in a 128x64 OLED
  * display.
  * 

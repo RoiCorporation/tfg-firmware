@@ -18,7 +18,6 @@ unsigned int analyze_hazards(ambient_info_t previous_readings[LENGTH_PREVIOUS_RE
         is_carbon_monoxide_worsening = true,
         is_methane_worsening = true,
         is_propane_worsening = true,
-        is_alcohol_worsening = true,
         is_hydrogen_gas_worsening = true;
 
     // Loop through the array and check if any of the ambient conditions is worsening.
@@ -50,11 +49,6 @@ unsigned int analyze_hazards(ambient_info_t previous_readings[LENGTH_PREVIOUS_RE
             ((previous_readings[i].propane_concentration - previous_readings[i - 1].propane_concentration) 
             < (PROPANE_WORSENING_MARGIN - EPSILON)))
             is_propane_worsening = false;
-        if (!is_alcohol_worsening || 
-            (previous_readings[i].alcohol_concentration <= previous_readings[i - 1].alcohol_concentration) ||
-            ((previous_readings[i].alcohol_concentration - previous_readings[i - 1].alcohol_concentration) 
-            < (ALCOHOL_WORSENING_MARGIN - EPSILON)))
-            is_alcohol_worsening = false;
         if (!is_hydrogen_gas_worsening || 
             (previous_readings[i].hydrogen_gas_concentration <= previous_readings[i - 1].hydrogen_gas_concentration) ||
             ((previous_readings[i].hydrogen_gas_concentration - previous_readings[i - 1].hydrogen_gas_concentration)
@@ -100,13 +94,6 @@ unsigned int analyze_hazards(ambient_info_t previous_readings[LENGTH_PREVIOUS_RE
         previous_readings[3].propane_concentration > PROPANE_HAZARD_THRESHOLD ||
         previous_readings[4].propane_concentration > PROPANE_HAZARD_THRESHOLD
     ) return PROPANE_WORSENING_HAZARD;
-    if (is_alcohol_worsening || 
-        previous_readings[0].alcohol_concentration > ALCOHOL_HAZARD_THRESHOLD ||
-        previous_readings[1].alcohol_concentration > ALCOHOL_HAZARD_THRESHOLD ||
-        previous_readings[2].alcohol_concentration > ALCOHOL_HAZARD_THRESHOLD ||
-        previous_readings[3].alcohol_concentration > ALCOHOL_HAZARD_THRESHOLD ||
-        previous_readings[4].alcohol_concentration > ALCOHOL_HAZARD_THRESHOLD
-    ) return ALCOHOL_WORSENING_HAZARD;
     if (is_hydrogen_gas_worsening || 
         previous_readings[0].hydrogen_gas_concentration > HYDROGEN_GAS_HAZARD_THRESHOLD ||
         previous_readings[1].hydrogen_gas_concentration > HYDROGEN_GAS_HAZARD_THRESHOLD ||

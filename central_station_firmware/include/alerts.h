@@ -21,7 +21,6 @@
 #define NUMBER_TONES_CARBON_MONOXIDE_HAZARD_ALARM 2
 #define NUMBER_TONES_METHANE_HAZARD_ALARM 5
 #define NUMBER_TONES_PROPANE_HAZARD_ALARM 3
-#define NUMBER_TONES_ALCOHOL_HAZARD_ALARM 5
 #define NUMBER_TONES_HYDROGEN_GAS_HAZARD_ALARM 3
 
 // Duration of each tone in the hazard alarms (in milliseconds).
@@ -31,7 +30,6 @@
 #define CARBON_MONOXIDE_HAZARD_ALARM_TONE_DURATION 150
 #define METHANE_HAZARD_ALARM_TONE_DURATION 700
 #define PROPANE_HAZARD_ALARM_TONE_DURATION 300
-#define ALCOHOL_HAZARD_ALARM_TONE_DURATION 900
 #define HYDROGEN_GAS_HAZARD_ALARM_TONE_DURATION 350
 
 
@@ -43,7 +41,6 @@ void play_air_quality_index_hazard_alarm(unsigned int slice, unsigned int channe
 void play_carbon_monoxide_hazard_alarm(unsigned int slice, unsigned int channel);
 void play_methane_hazard_alarm(unsigned int slice, unsigned int channel);
 void play_propane_hazard_alarm(unsigned int slice, unsigned int channel);
-void play_alcohol_hazard_alarm(unsigned int slice, unsigned int channel);
 void play_hydrogen_gas_hazard_alarm(unsigned int slice, unsigned int channel);
 
 

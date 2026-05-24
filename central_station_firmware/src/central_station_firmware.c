@@ -86,7 +86,6 @@ int main() {
         previous_readings[i].carbon_monoxide_concentration = 0;
         previous_readings[i].methane_concentration = 0;
         previous_readings[i].propane_concentration = 0;
-        previous_readings[i].alcohol_concentration = 0;
         previous_readings[i].hydrogen_gas_concentration = 0;
     }
 
@@ -188,7 +187,6 @@ int main() {
             station_readings.carbon_monoxide_concentration = 0;
             station_readings.methane_concentration = 0;
             station_readings.propane_concentration = 0;
-            station_readings.alcohol_concentration = 0;
             station_readings.hydrogen_gas_concentration = 0;
 
             if (read_bme680_sensor(
@@ -296,7 +294,6 @@ int main() {
             wireless_station_readings_buffer[incoming_packet_data_pipe].carbon_monoxide_concentration = NAN;
             wireless_station_readings_buffer[incoming_packet_data_pipe].methane_concentration = NAN;
             wireless_station_readings_buffer[incoming_packet_data_pipe].propane_concentration = NAN;
-            wireless_station_readings_buffer[incoming_packet_data_pipe].alcohol_concentration = NAN;
             wireless_station_readings_buffer[incoming_packet_data_pipe].hydrogen_gas_concentration = NAN;
 
             // Decrypt the message received.

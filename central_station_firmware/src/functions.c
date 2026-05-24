@@ -976,11 +976,6 @@ void handle_display_turn_update(
                 station_readings->propane_concentration);
             break;
         case 9:
-            display_alcohol_concentration(
-                oled_display,
-                station_readings->alcohol_concentration);
-            break;
-        case 10:
             display_hydrogen_gas_concentration(
                 oled_display,
                 station_readings->hydrogen_gas_concentration);

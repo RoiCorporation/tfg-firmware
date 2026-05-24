@@ -45,8 +45,6 @@
 #define METHANE_HAZARD_THRESHOLD 1000.0
 #define PROPANE_WORSENING_MARGIN 10.0
 #define PROPANE_HAZARD_THRESHOLD 1100.0
-#define ALCOHOL_WORSENING_MARGIN 0.2
-#define ALCOHOL_HAZARD_THRESHOLD 2.0
 #define HYDROGEN_GAS_WORSENING_MARGIN 10.0
 #define HYDROGEN_GAS_HAZARD_THRESHOLD 4000.0
 #define EPSILON 1e-5
@@ -107,7 +105,6 @@ typedef struct {
     float carbon_monoxide_concentration;
     float methane_concentration;
     float propane_concentration;
-    float alcohol_concentration;
     float hydrogen_gas_concentration;
 } ambient_info_t;
 

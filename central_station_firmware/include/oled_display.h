@@ -25,10 +25,6 @@ void display_propane_concentration(
     ssd1306_t *oled_display,
     float propane_concentration
 );
-void display_alcohol_concentration(
-    ssd1306_t *oled_display,
-    float alcohol_concentration
-);
 void display_hydrogen_gas_concentration(
     ssd1306_t *oled_display,
     float hydrogen_gas_concentration

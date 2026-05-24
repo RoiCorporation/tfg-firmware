@@ -36,9 +36,6 @@ void activate_hazard_alert(unsigned int hazard_code) {
         case PROPANE_WORSENING_HAZARD:
             play_propane_hazard_alarm(slice, channel);
             break;
-        case ALCOHOL_WORSENING_HAZARD:
-            play_alcohol_hazard_alarm(slice, channel);
-            break;
         case HYDROGEN_GAS_WORSENING_HAZARD:
             play_hydrogen_gas_hazard_alarm(slice, channel);
             break;
@@ -196,32 +193,6 @@ void play_propane_hazard_alarm(unsigned int slice, unsigned int channel) {
 
             pwm_set_enabled(slice, true);
             sleep_ms(PROPANE_HAZARD_ALARM_TONE_DURATION);
-        }
-    }
-    pwm_set_enabled(slice, false); // Turn off the buzzer after the alarm.
-}
-
-
-/**
- * @brief Use the buzzer to play the alarm specific to the rising alcohol
- * concentration hazard.
- * 
- * @param slice the PWM slice number for the buzzer pin.
- * @param channel the PWM channel number for the buzzer pin.
- */
-void play_alcohol_hazard_alarm(unsigned int slice, unsigned int channel) {
-    unsigned int frequencies[NUMBER_TONES_ALCOHOL_HAZARD_ALARM] = {NOTE_B5, NOTE_A5, NOTE_G5, NOTE_F5, NOTE_B4};
-    float clkdiv = 4.0f;
-
-    for (int i = 0; i < NUMBER_ALARM_REPETITIONS; i++) {
-        for (int t = 0; t < NUMBER_TONES_ALCOHOL_HAZARD_ALARM; t++) {
-            float wrap = (125000000 / (clkdiv * frequencies[t])) - 1;
-            pwm_set_clkdiv(slice, clkdiv);
-            pwm_set_wrap(slice, (unsigned int)wrap);
-            pwm_set_chan_level(slice, channel, wrap / 2);
-
-            pwm_set_enabled(slice, true);
-            sleep_ms(ALCOHOL_HAZARD_ALARM_TONE_DURATION);
         }
     }
     pwm_set_enabled(slice, false); // Turn off the buzzer after the alarm.

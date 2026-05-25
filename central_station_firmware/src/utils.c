@@ -154,6 +154,7 @@ void uint32_to_u8_be(uint32_t value, uint8_t array[]) {
 /**
  * @brief Key-Derivation Function used to create a key for the AES encryption
  * module from the shared secret generated after the ECDH key exchange.
+ * Taken from a monocypher example at https://monocypher.org/manual/blake2b.
  * 
  * @param output_key uint8_t array that will contain the generated key.
  * @param output_key_size size_t size of the key in bytes.

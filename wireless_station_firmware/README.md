@@ -1,4 +1,4 @@
-# Wireless Station Firmware
+# Wireless station firmware
 
 
 
